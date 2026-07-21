@@ -1,0 +1,3528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>STORMPATH V1.3.5 — Navigation × Weather Intelligence</title>
+<style>
+  @import url('data:text/css,');
+</style>
+<style>
+  .orbitron { font-family: 'Courier New', Courier, monospace; }
+</style>
+<style>
+  :root {
+    --bg-deep: #020408;
+    --bg-panel: #060d14;
+    --bg-card: #0a1520;
+    --cyan: #00e5ff;
+    --cyan-dim: #00a8bd;
+    --amber: #ffab00;
+    --amber-dim: #cc8800;
+    --red-alert: #ff3d3d;
+    --green-safe: #00e676;
+    --purple-storm: #ce93d8;
+    --grid-line: rgba(0,229,255,0.07);
+    --border: rgba(0,229,255,0.18);
+    --text-primary: #e0f7fa;
+    --text-secondary: rgba(176,220,230,0.65);
+    --radar-0: transparent;
+    --radar-1: rgba(0,100,255,0.4);
+    --radar-2: rgba(0,200,255,0.5);
+    --radar-3: rgba(0,255,100,0.5);
+    --radar-4: rgba(200,255,0,0.55);
+    --radar-5: rgba(255,200,0,0.6);
+    --radar-6: rgba(255,100,0,0.65);
+    --radar-7: rgba(255,0,0,0.7);
+    --radar-8: rgba(180,0,180,0.75);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', 'Trebuchet MS', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── SHARED TOP BAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-weight: 900;
+    font-size: 1.3rem;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,229,255,0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: conic-gradient(from 0deg, var(--cyan), var(--amber), var(--cyan));
+    border-radius: 50%;
+    animation: spin 8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── PATCH: DRIVER / MAP / WEATHER NAV ── */
+  .topbar-center {
+    display: flex;
+    gap: 6px;
+  }
+
+  .mode-btn {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  .mode-btn:hover, .mode-btn.active {
+    background: rgba(0,229,255,0.1);
+    color: var(--cyan);
+    border-color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    box-shadow: 0 0 15px rgba(0,229,255,0.15);
+  }
+
+  .mode-btn.active { background: rgba(0,229,255,0.15); }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green-safe);
+    box-shadow: 0 0 8px var(--green-safe);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(0.8); }
+  }
+
+  .alert-badge {
+    background: rgba(255,61,61,0.2);
+    border: 1px solid var(--red-alert);
+    color: var(--red-alert);
+    padding: 3px 8px;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    animation: alert-flash 1.5s ease-in-out infinite;
+  }
+
+  @keyframes alert-flash {
+    0%,100% { opacity:1; }
+    50% { opacity:0.5; }
+  }
+
+  /* ── PATCH: SCREEN SYSTEM ── */
+  /* Each screen occupies the full area below the topbar + above bottombar */
+  .sp-screen {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    flex-direction: column;
+  }
+  .sp-screen.active {
+    display: flex;
+  }
+
+  /* ── MAP SCREEN LAYOUT (formerly .main) ── */
+  .map-screen-inner {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .left-panel::-webkit-scrollbar { width: 3px; }
+  .left-panel::-webkit-scrollbar-track { background: transparent; }
+  .left-panel::-webkit-scrollbar-thumb { background: var(--cyan-dim); }
+
+  .panel-section {
+    border-bottom: 1px solid var(--grid-line);
+    padding: 14px 16px;
+  }
+
+  .section-label {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    color: var(--cyan-dim);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--cyan-dim), transparent);
+  }
+
+  .route-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--grid-line);
+    padding: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--amber);
+  }
+
+  .stat-val {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--amber);
+    line-height: 1;
+  }
+
+  .stat-unit {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    letter-spacing: 1px;
+  }
+
+  .turn-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--grid-line);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .turn-item:hover { background: rgba(0,229,255,0.04); }
+  .turn-item:last-child { border-bottom: none; }
+
+  .turn-icon {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .turn-item.active .turn-icon {
+    border-color: var(--amber);
+    background: rgba(255,171,0,0.12);
+    box-shadow: 0 0 10px rgba(255,171,0,0.2);
+  }
+
+  .turn-info { flex: 1; min-width: 0; }
+
+  .turn-street {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .turn-dist {
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .turn-item.active .turn-street { color: var(--amber); }
+
+  .hazard-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--grid-line);
+  }
+
+  .hazard-item:last-child { border-bottom: none; }
+
+  .hazard-sev {
+    width: 8px;
+    flex-shrink: 0;
+    align-self: stretch;
+    margin-top: 2px;
+    border-radius: 2px;
+  }
+
+  .hazard-sev.high { background: var(--red-alert); box-shadow: 0 0 6px var(--red-alert); }
+  .hazard-sev.med { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .hazard-sev.low { background: var(--cyan); }
+
+  .hazard-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .hazard-desc {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  .weather-strip {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .wx-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--grid-line);
+    padding: 6px 10px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .wx-chip span { color: var(--cyan); font-family: 'Courier New', monospace; }
+
+  .radar-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+  }
+
+  .legend-color {
+    width: 24px; height: 10px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .legend-bar {
+    width: 100%;
+    height: 14px;
+    border-radius: 2px;
+    background: linear-gradient(90deg,
+      rgba(0,100,255,0.6),
+      rgba(0,229,255,0.7),
+      rgba(0,255,100,0.7),
+      rgba(200,255,0,0.75),
+      rgba(255,200,0,0.8),
+      rgba(255,100,0,0.85),
+      rgba(255,0,0,0.9),
+      rgba(180,0,180,0.95)
+    );
+    margin-bottom: 3px;
+  }
+
+  .legend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Courier New', monospace;
+    font-size: 0.58rem;
+    color: var(--text-secondary);
+  }
+
+  /* ── MAP CANVAS AREA ── */
+  .map-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #050e18;
+  }
+
+  .map-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #mapCanvas {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  #radarCanvas {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    opacity: 0.82;
+    transition: opacity 0.4s;
+  }
+
+  #radarCanvas.hidden { opacity: 0; pointer-events: none; }
+
+  .hud-compass {
+    position: absolute;
+    top: 16px; right: 20px;
+    z-index: 10;
+    width: 64px; height: 64px;
+  }
+
+  .compass-ring {
+    width: 64px; height: 64px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    background: rgba(6,13,20,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    position: relative;
+  }
+
+  .compass-n {
+    position: absolute;
+    top: 4px;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.6rem;
+    color: var(--red-alert);
+    font-weight: 700;
+  }
+
+  .compass-needle {
+    width: 2px; height: 22px;
+    background: linear-gradient(180deg, var(--red-alert) 50%, var(--cyan) 50%);
+    border-radius: 1px;
+    transform-origin: center bottom;
+    animation: compass-wobble 6s ease-in-out infinite;
+  }
+
+  @keyframes compass-wobble {
+    0%,100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+
+  .hud-speed {
+    position: absolute;
+    bottom: 80px; right: 20px;
+    z-index: 10;
+    background: rgba(6,13,20,0.9);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 80px;
+  }
+
+  .speed-val {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--amber);
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(255,171,0,0.4);
+  }
+
+  .speed-unit {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  .speed-limit {
+    margin-top: 6px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 6px auto 0;
+  }
+
+  .hud-nextturn {
+    position: absolute;
+    bottom: 80px; left: 16px;
+    z-index: 10;
+    background: rgba(6,13,20,0.92);
+    border: 1px solid var(--amber);
+    border-left: 4px solid var(--amber);
+    padding: 12px 16px;
+    min-width: 200px;
+    box-shadow: 0 0 20px rgba(255,171,0,0.1);
+  }
+
+  .nextturn-dist {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--amber);
+  }
+
+  .nextturn-icon { font-size: 1.6rem; }
+
+  .nextturn-street {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 4px;
+  }
+
+  .nextturn-road {
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+  }
+
+  .hud-storm-warning {
+    position: absolute;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background: rgba(255,61,61,0.12);
+    border: 1px solid var(--red-alert);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: warning-pulse 2s ease-in-out infinite;
+    backdrop-filter: blur(4px);
+  }
+
+  @keyframes warning-pulse {
+    0%,100% { box-shadow: 0 0 10px rgba(255,61,61,0.2); }
+    50% { box-shadow: 0 0 25px rgba(255,61,61,0.5); }
+  }
+
+  .warning-text {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--red-alert);
+    font-weight: 700;
+  }
+
+  .warning-details {
+    font-size: 0.68rem;
+    color: rgba(255,61,61,0.8);
+  }
+
+  .hud-radar-time {
+    position: absolute;
+    bottom: 16px; right: 20px;
+    z-index: 10;
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    color: var(--cyan-dim);
+    background: rgba(6,13,20,0.7);
+    padding: 4px 8px;
+    border: 1px solid var(--grid-line);
+  }
+
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center,
+      transparent 55%,
+      rgba(2,4,8,0.55) 100%
+    );
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .right-panel::-webkit-scrollbar { width: 3px; }
+  .right-panel::-webkit-scrollbar-track { background: transparent; }
+  .right-panel::-webkit-scrollbar-thumb { background: var(--amber-dim); }
+
+  .storm-cell {
+    background: var(--bg-card);
+    border: 1px solid var(--grid-line);
+    margin: 0 0 8px 0;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .storm-cell::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--red-alert);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+    transform-origin: left;
+  }
+
+  .storm-cell:hover::before, .storm-cell.danger::before { transform: scaleX(1); }
+  .storm-cell.danger { border-color: rgba(255,61,61,0.3); }
+  .storm-cell.warning { border-color: rgba(255,171,0,0.3); }
+  .storm-cell.warning::before { background: var(--amber); }
+
+  .cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .cell-id {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+  }
+
+  .cell-type {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border: 1px solid;
+  }
+
+  .cell-type.severe { color: var(--red-alert); border-color: var(--red-alert); background: rgba(255,61,61,0.1); }
+  .cell-type.moderate { color: var(--amber); border-color: var(--amber); background: rgba(255,171,0,0.1); }
+  .cell-type.light { color: var(--cyan); border-color: var(--cyan); background: rgba(0,229,255,0.1); }
+
+  .cell-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  .cell-stat {
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    color: var(--text-secondary);
+  }
+
+  .cell-stat strong {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+  }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--bg-deep);
+    margin-top: 6px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  .mini-scope {
+    margin: 0 16px 12px;
+    position: relative;
+  }
+
+  /* ── PATCH: miniRadar stays in MAP right-panel. miniRadarWx is in WEATHER screen. ── */
+  #miniRadar {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg-deep);
+    box-shadow: 0 0 20px rgba(0,229,255,0.08), inset 0 0 30px rgba(0,0,0,0.5);
+  }
+
+  #miniRadarWx {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg-deep);
+    box-shadow: 0 0 20px rgba(0,229,255,0.08), inset 0 0 30px rgba(0,0,0,0.5);
+  }
+
+  .scope-label {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 2px;
+    color: var(--cyan-dim);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* ── BOTTOM BAR ── */
+  .bottombar {
+    height: 34px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 20px;
+    flex-shrink: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+  }
+
+  .ticker-wrap {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .ticker {
+    white-space: nowrap;
+    animation: ticker-scroll 30s linear infinite;
+    color: var(--cyan-dim);
+  }
+
+  @keyframes ticker-scroll {
+    from { transform: translateX(100%); }
+    to { transform: translateX(-100%); }
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .status-item-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green-safe);
+  }
+
+  /* Reroute popup */
+  .reroute-popup {
+    position: absolute;
+    top: 70px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: rgba(6,13,20,0.97);
+    border: 1px solid var(--amber);
+    padding: 14px 20px;
+    min-width: 280px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(255,171,0,0.2);
+    display: none;
+  }
+
+  .reroute-popup.show { display: block; animation: popup-in 0.3s ease; }
+
+  @keyframes popup-in {
+    from { opacity:0; transform: translateX(-50%) translateY(-10px); }
+    to { opacity:1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .reroute-title {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+
+  .reroute-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  .reroute-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .reroute-btn {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    padding: 7px 16px;
+    border: 1px solid;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .reroute-btn.accept { color: var(--green-safe); border-color: var(--green-safe); }
+  .reroute-btn.accept:hover { background: rgba(0,230,118,0.15); }
+  .reroute-btn.dismiss { color: var(--text-secondary); border-color: var(--border); }
+
+  .zoom-controls {
+    position: absolute;
+    right: 20px;
+    bottom: 130px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .zoom-btn {
+    width: 34px; height: 34px;
+    background: rgba(6,13,20,0.9);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .zoom-btn:hover {
+    color: var(--cyan);
+    border-color: var(--cyan);
+    background: rgba(0,229,255,0.1);
+  }
+
+  /* ════════════════════════════════════════════════════
+     DRIVER SCREEN — MINIMAL OVERLAY
+     ════════════════════════════════════════════════════ */
+
+  #screen-driver {
+    background: #04140c;
+    transition: background 0.5s ease;
+  }
+
+  .sp-state-label,
+  .sp-action-icon,
+  .sp-action,
+  .sp-reason,
+  .sp-fallback-text,
+  .sp-conf {
+    transition: color 0.4s ease, background 0.4s ease, border-color 0.4s ease, opacity 0.35s ease;
+  }
+
+  .sp-center, .sp-fallback, .sp-statebar {
+    transition: opacity 0.3s ease;
+  }
+
+  .sp-fade { opacity: 0; }
+
+  #screen-driver.state-normal   { background: #04140c; }
+  #screen-driver.state-caution  { background: #1a1404; }
+  #screen-driver.state-danger   { background: #1a0606; }
+  #screen-driver.state-stop     { background: #000000; }
+  #screen-driver.state-safe     { background: #0a0a14; }
+  #screen-driver.state-offline  { background: #0c0c0c; }
+
+  .sp-statebar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sp-state-label {
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+
+  .state-normal  .sp-state-label { background: rgba(0,230,118,0.15); color: var(--green-safe); border: 1px solid var(--green-safe); }
+  .state-caution .sp-state-label { background: rgba(255,171,0,0.15); color: var(--amber); border: 1px solid var(--amber); }
+  .state-danger  .sp-state-label { background: rgba(255,61,61,0.18); color: var(--red-alert); border: 1px solid var(--red-alert); animation: alert-flash 1.2s ease-in-out infinite; }
+  .state-stop    .sp-state-label { background: #ff3d3d; color: #000; border: 1px solid #ff3d3d; animation: alert-flash 0.8s ease-in-out infinite; }
+  .state-safe    .sp-state-label { background: rgba(206,147,216,0.18); color: var(--purple-storm); border: 1px solid var(--purple-storm); }
+  .state-offline .sp-state-label { background: rgba(150,150,150,0.18); color: #bbb; border: 1px solid #999; }
+
+  .sp-conf {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.62rem;
+  }
+
+  .sp-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    gap: 18px;
+  }
+
+  .sp-action-icon {
+    font-size: 4.5rem;
+    line-height: 1;
+  }
+
+  .sp-action {
+    font-size: clamp(2.2rem, 8vw, 4rem);
+    font-weight: 800;
+    letter-spacing: 2px;
+    line-height: 1.1;
+  }
+
+  .state-normal  .sp-action { color: var(--green-safe); }
+  .state-caution .sp-action { color: var(--amber); }
+  .state-danger  .sp-action { color: var(--red-alert); }
+  .state-stop    .sp-action { color: #ff3d3d; }
+  .state-safe    .sp-action { color: var(--purple-storm); }
+  .state-offline .sp-action { color: #ccc; }
+
+  .sp-reason {
+    font-size: clamp(1rem, 3vw, 1.3rem);
+    color: rgba(255,255,255,0.85);
+    max-width: 640px;
+    line-height: 1.5;
+  }
+
+  .sp-fallback {
+    flex-shrink: 0;
+    padding: 16px 18px 22px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sp-fallback-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 6px;
+  }
+
+  .sp-fallback-text {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.8);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .sp-placeholder-badge {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 1.5px;
+    padding: 3px 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.55);
+  }
+
+  .sp-source-panel {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    padding: 0 18px 10px;
+  }
+
+  .sp-source-chip {
+    font-family: 'Courier New', monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.5px;
+    padding: 3px 7px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.5);
+  }
+
+  .sp-source-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .sp-source-chip.src-connected .sp-source-dot { background: var(--green-safe); box-shadow: 0 0 5px var(--green-safe); }
+  .sp-source-chip.src-unavailable .sp-source-dot { background: var(--red-alert); }
+  .sp-source-chip.src-prototype .sp-source-dot { background: #999; }
+
+  .sp-source-chip.src-unavailable { color: rgba(255,120,120,0.7); border-color: rgba(255,61,61,0.25); }
+  .sp-source-chip.src-prototype { color: rgba(255,255,255,0.4); }
+
+  .sp-conf-badge {
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 2px;
+    margin-left: 6px;
+  }
+  .sp-conf-badge.conf-high        { background: rgba(0,230,118,0.15); color: var(--green-safe); }
+  .sp-conf-badge.conf-medium      { background: rgba(255,171,0,0.15); color: var(--amber); }
+  .sp-conf-badge.conf-low         { background: rgba(206,147,216,0.18); color: var(--purple-storm); }
+  .sp-conf-badge.conf-conflicting { background: rgba(255,61,61,0.18); color: var(--red-alert); }
+  .sp-conf-badge.conf-stale       { background: rgba(150,150,150,0.18); color: #bbb; }
+  .sp-conf-badge.conf-unknown     { background: rgba(206,147,216,0.18); color: var(--purple-storm); }
+
+  .state-safe .sp-source-panel { display: none; }
+  .state-safe .sp-statebar { border-bottom-color: rgba(206,147,216,0.3); }
+  .state-safe .sp-action-icon { animation: alert-flash 1.8s ease-in-out infinite; }
+
+  .sp-offline-banner {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1.5px;
+    font-size: 0.62rem;
+    color: #ccc;
+    margin-top: 12px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.03);
+  }
+  .state-offline .sp-offline-banner { display: flex; }
+  .sp-offline-banner .line-1 { font-weight: 700; color: #fff; }
+
+  .sp-stop-banner {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1.5px;
+    font-size: 0.62rem;
+    color: #ff8a8a;
+    margin-top: 12px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255,61,61,0.4);
+    background: rgba(255,61,61,0.06);
+  }
+  .state-stop .sp-stop-banner { display: flex; }
+  .sp-stop-banner .line-1 { font-weight: 700; color: #ff3d3d; }
+
+  /* ── WEATHER SCREEN ── */
+  #screen-weather {
+    background: var(--bg-deep);
+  }
+
+  .wx-screen-inner {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .wx-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .wx-right {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 14px 16px;
+    gap: 14px;
+  }
+
+  .wx-title {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: var(--cyan-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wx-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--cyan-dim), transparent);
+  }
+
+  .wx-conf-row {
+    background: var(--bg-card);
+    border: 1px solid var(--grid-line);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .wx-conf-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+  }
+
+  /* ── DEV PANEL ── */
+  #sp-dev-toggle {
+    position: fixed;
+    bottom: 48px;
+    right: 14px;
+    z-index: 9999;
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    padding: 7px 12px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(0,229,255,0.3);
+    color: rgba(0,229,255,0.7);
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  #sp-dev-toggle:hover { background: rgba(0,0,0,0.9); border-color: var(--cyan); color: var(--cyan); }
+
+  #sp-dev-panel {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 9999;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(0,229,255,0.3);
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    font-family: 'Courier New', monospace;
+  }
+  #sp-dev-panel.show { display: flex; }
+  #sp-dev-panel .sp-dev-title {
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    color: rgba(0,229,255,0.6);
+    margin-bottom: 2px;
+  }
+  #sp-dev-panel button {
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ddd;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 2px;
+  }
+  #sp-dev-panel button:hover { background: rgba(0,229,255,0.12); border-color: var(--cyan); color: var(--cyan); }
+  #sp-dev-panel button.active-state { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.1); }
+
+/* ═══════════════════════════════════════════════════════
+   STORMPATH V1.3.3 — PHASE 4 USER EXPERIENCE POLISH
+   Additive overrides only. Core engines remain unchanged.
+   ═══════════════════════════════════════════════════════ */
+
+/* STEP 1 — 200ms screen transition */
+.sp-screen {
+  position: relative;
+}
+
+.sp-screen.active {
+  animation: sp-screen-enter 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes sp-screen-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-screen.active { animation: none; }
+}
+
+/* STEP 2 — visual screen titles */
+.sp-screen-title {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 60;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: rgba(224,247,250,0.58);
+  text-shadow: 0 0 10px rgba(0,229,255,0.18);
+}
+
+#screen-driver  .sp-screen-title { color: rgba(255,255,255,0.42); }
+#screen-map     .sp-screen-title { color: var(--cyan-dim); }
+#screen-weather .sp-screen-title { color: var(--purple-storm); }
+
+/* STEP 3 — WEATHER readability */
+#screen-weather .wx-screen-inner {
+  gap: 20px;
+  padding: 20px;
+  overflow: auto;
+}
+
+#screen-weather .wx-left,
+#screen-weather .wx-right {
+  gap: 18px;
+}
+
+#screen-weather .wx-left > div,
+#screen-weather .wx-right > div {
+  background: var(--bg-card);
+  border: 1px solid var(--grid-line);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+#screen-weather .wx-title {
+  margin-bottom: 12px;
+  font-size: 0.68rem;
+  letter-spacing: 2.5px;
+}
+
+#screen-weather .wx-chip {
+  padding: 9px 12px;
+  font-size: 0.76rem;
+}
+
+#screen-weather .hazard-item {
+  gap: 12px;
+  padding: 12px 0;
+}
+
+#screen-weather .hazard-name { font-size: 0.84rem; }
+
+#screen-weather .hazard-desc {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+#screen-weather .wx-conf-row {
+  padding: 12px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--grid-line);
+  border-radius: 3px;
+}
+
+#wx-state-mirror { font-size: 0.88rem  !important; }
+#wx-conf-mirror  { font-size: 1.35rem !important; letter-spacing: 1px; }
+
+#screen-weather #wx-source-mirror { gap: 8px !important; }
+
+#screen-weather #wx-source-mirror .sp-source-chip {
+  padding: 6px 9px;
+  font-size: 0.62rem;
+}
+
+/* STEP 4 — MAP readability and panel balance */
+#screen-map .left-panel  { width: clamp(240px, 24vw, 300px); }
+#screen-map .right-panel { width: clamp(220px, 21vw, 260px); }
+#screen-map .panel-section { padding: 17px 18px; }
+
+#screen-map .turn-item {
+  gap: 12px;
+  padding: 12px 0;
+}
+
+#screen-map .turn-icon {
+  width: 36px;
+  height: 36px;
+}
+
+#screen-map .turn-street { font-size: 0.84rem; }
+
+#screen-map .turn-dist {
+  margin-top: 4px;
+  font-size: 0.68rem;
+}
+
+#screen-map .hazard-item {
+  gap: 12px;
+  padding: 12px 0;
+}
+
+#screen-map .hazard-name { font-size: 0.82rem; }
+
+#screen-map .hazard-desc {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 820px) {
+  #screen-map .left-panel       { width: 230px; }
+  #screen-map .right-panel      { width: 210px; }
+  #screen-weather .wx-screen-inner { gap: 12px; padding: 12px; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   STORMPATH V1.3.4 — PHASE 5 UI POLISH
+   Additive presentation and responsive-layout overrides only.
+   No engine, state, source, radar, map, or simulation changes.
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --text-secondary: rgba(190, 226, 234, 0.76);
+  --border: rgba(0, 229, 255, 0.25);
+  --grid-line: rgba(0, 229, 255, 0.10);
+}
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  min-height: 100vh;
+  height: 100dvh;
+}
+
+.topbar {
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+}
+
+.bottombar {
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(34px + env(safe-area-inset-bottom));
+}
+
+/* Keep visual titles in a dedicated strip instead of over content. */
+.sp-screen {
+  padding-top: 28px;
+}
+
+.sp-screen-title {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 28px;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.035), transparent);
+  border-bottom: 1px solid rgba(255,255,255,0.045);
+}
+
+#screen-driver .sp-screen-title {
+  background: linear-gradient(90deg, transparent, rgba(0,230,118,0.035), transparent);
+}
+
+#screen-weather .sp-screen-title {
+  background: linear-gradient(90deg, transparent, rgba(206,147,216,0.04), transparent);
+}
+
+/* Clearer hierarchy without changing content or system behavior. */
+.stat-card,
+.storm-cell,
+.wx-conf-row,
+.wx-chip,
+.turn-icon {
+  border-color: var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.panel-section {
+  border-bottom-color: var(--grid-line);
+}
+
+.section-label,
+.wx-title {
+  font-weight: 700;
+}
+
+.mode-btn,
+.zoom-btn,
+.reroute-btn,
+#sp-dev-toggle,
+#sp-dev-panel button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mode-btn:focus-visible,
+.zoom-btn:focus-visible,
+.reroute-btn:focus-visible,
+#sp-dev-toggle:focus-visible,
+#sp-dev-panel button:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.mode-btn:active,
+.zoom-btn:active,
+.reroute-btn:active,
+#sp-dev-toggle:active,
+#sp-dev-panel button:active {
+  transform: translateY(1px);
+}
+
+.mode-btn.active {
+  box-shadow: inset 0 -2px 0 var(--cyan), 0 0 15px rgba(0,229,255,0.15);
+}
+
+.left-panel,
+.right-panel,
+.wx-left,
+.wx-right,
+.map-screen-inner,
+.wx-screen-inner {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (pointer: coarse) {
+  .mode-btn,
+  .zoom-btn,
+  .reroute-btn,
+  #sp-dev-toggle,
+  #sp-dev-panel button {
+    min-height: 44px;
+  }
+
+  .turn-item,
+  .storm-cell {
+    min-height: 48px;
+  }
+}
+
+/* Tablet and narrow-browser cleanup. */
+@media (max-width: 1100px) {
+  .topbar {
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 1.05rem;
+    letter-spacing: 3px;
+  }
+
+  .topbar-right {
+    gap: 9px;
+    font-size: 0.64rem;
+  }
+
+  .mode-btn {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+@media (max-width: 840px) {
+  .topbar {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 8px;
+  }
+
+  .logo {
+    order: 1;
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+  }
+
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .topbar-right {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .topbar-center {
+    order: 3;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .mode-btn {
+    min-width: 0;
+    min-height: 40px;
+    padding: 7px 6px;
+    clip-path: none;
+    border-radius: 3px;
+  }
+
+  #screen-map .left-panel {
+    width: 220px;
+  }
+
+  #screen-map .right-panel {
+    width: 205px;
+  }
+}
+
+/* iPhone-width layout: preserve all three screens and every control,
+   but stack dense MAP/WEATHER panels so nothing is crushed off-screen. */
+@media (max-width: 620px) {
+  .topbar-right .status-item {
+    display: none;
+  }
+
+  .topbar-right {
+    gap: 7px;
+  }
+
+  .alert-badge {
+    font-size: 0.54rem;
+    letter-spacing: 0.5px;
+    padding: 3px 6px;
+  }
+
+  #clock {
+    font-size: 0.62rem !important;
+  }
+
+  .mode-btn {
+    font-size: 0.59rem;
+    letter-spacing: 1px;
+  }
+
+  .sp-screen {
+    padding-top: 26px;
+  }
+
+  .sp-screen-title {
+    height: 26px;
+    font-size: 0.56rem;
+    letter-spacing: 3px;
+  }
+
+  .sp-statebar {
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .sp-center {
+    padding: 16px 14px;
+    gap: 12px;
+  }
+
+  .sp-action-icon {
+    font-size: 3.4rem;
+  }
+
+  .sp-action {
+    font-size: clamp(1.9rem, 10vw, 3.1rem);
+  }
+
+  .sp-reason {
+    font-size: 0.98rem;
+    line-height: 1.42;
+  }
+
+  .sp-source-panel {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .sp-fallback {
+    padding: 12px 14px 16px;
+  }
+
+  .map-screen-inner {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #screen-map .map-wrap {
+    order: 1;
+    flex: 0 0 52vh;
+    width: 100%;
+    min-height: 330px;
+  }
+
+  #screen-map .left-panel,
+  #screen-map .right-panel {
+    width: 100%;
+    flex: none;
+    overflow: visible;
+    border-left: none;
+    border-right: none;
+  }
+
+  #screen-map .left-panel {
+    order: 2;
+    border-top: 1px solid var(--border);
+  }
+
+  #screen-map .right-panel {
+    order: 3;
+    border-top: 1px solid var(--border);
+  }
+
+  #screen-map .panel-section {
+    padding: 15px 14px;
+  }
+
+  .hud-storm-warning {
+    top: 10px;
+    left: 10px;
+    right: 84px;
+    transform: none;
+    padding: 7px 9px;
+  }
+
+  .warning-text {
+    font-size: 0.54rem;
+    letter-spacing: 1px;
+  }
+
+  .warning-details {
+    display: none;
+  }
+
+  .hud-nextturn {
+    left: 10px;
+    right: 98px;
+    bottom: 10px;
+    min-width: 0;
+    padding: 9px 10px;
+  }
+
+  .nextturn-dist {
+    font-size: 0.92rem;
+  }
+
+  .nextturn-street {
+    font-size: 0.72rem;
+  }
+
+  .nextturn-road {
+    font-size: 0.56rem;
+  }
+
+  .hud-speed {
+    right: 10px;
+    bottom: 10px;
+    min-width: 76px;
+    padding: 9px 10px;
+  }
+
+  .speed-val {
+    font-size: 1.65rem;
+  }
+
+  .zoom-controls {
+    right: 10px;
+    bottom: 112px;
+  }
+
+  .hud-compass {
+    top: 10px;
+    right: 10px;
+    transform: scale(0.84);
+    transform-origin: top right;
+  }
+
+  .hud-radar-time {
+    display: none;
+  }
+
+  .reroute-popup {
+    top: 54px;
+    width: calc(100% - 24px);
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .wx-screen-inner {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #screen-weather .wx-left,
+  #screen-weather .wx-right {
+    width: 100%;
+    flex: none;
+    overflow: visible;
+    padding: 0;
+    border-left: none;
+  }
+
+  #screen-weather .wx-left > div,
+  #screen-weather .wx-right > div {
+    padding: 14px;
+  }
+
+  #miniRadarWx {
+    width: min(220px, 70vw);
+    height: auto;
+  }
+
+  .bottombar {
+    min-height: calc(36px + env(safe-area-inset-bottom));
+    height: auto;
+    justify-content: center;
+    gap: 10px;
+    padding-top: 5px;
+  }
+
+  .bottombar > .status-item:first-child,
+  .ticker-wrap,
+  #coords {
+    display: none;
+  }
+
+  #sp-dev-toggle {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(46px + env(safe-area-inset-bottom));
+  }
+
+  #sp-dev-panel {
+    top: max(10px, env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+  }
+}
+
+@media (max-width: 620px) and (max-height: 700px) {
+  #screen-map .map-wrap {
+    flex-basis: 48vh;
+    min-height: 285px;
+  }
+
+  .sp-center {
+    gap: 9px;
+  }
+
+  .sp-action-icon {
+    font-size: 2.8rem;
+  }
+
+  .sp-fallback {
+    padding-top: 9px;
+    padding-bottom: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+     SHARED TOP BAR — DRIVER / MAP / WEATHER tabs
+     ════════════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    STORMPATH
+  </div>
+  <div class="topbar-center">
+    <!-- PATCH: DRIVER / MAP / WEATHER navigation -->
+    <button class="mode-btn active" id="nav-btn-driver"  onclick="switchScreen('driver')">⬤ DRIVER</button>
+    <button class="mode-btn"        id="nav-btn-map"     onclick="switchScreen('map')">🗺 MAP</button>
+    <button class="mode-btn"        id="nav-btn-weather" onclick="switchScreen('weather')">🌩 WEATHER</button>
+  </div>
+  <div class="topbar-right">
+    <div class="status-item"><div class="status-dot"></div> GPS SIMULATED</div>
+    <div class="status-item"><div class="status-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div> RADAR SIMULATED</div>
+    <div class="alert-badge">⚠ WX DATA SIMULATED</div>
+    <div id="clock" style="font-family:'Courier New',monospace;font-size:0.72rem;color:var(--cyan-dim)">--:--:--</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     SCREEN 1: DRIVER
+     ════════════════════════════════════════════════ -->
+<div id="screen-driver" class="sp-screen active state-danger">
+<div class="sp-screen-title" aria-hidden="true">DRIVER</div>
+
+  <div class="sp-statebar">
+    <div class="sp-state-label" id="sp-state-label">DANGER</div>
+    <div class="sp-conf" id="sp-conf-label">CONFIDENCE: N/A<span class="sp-conf-badge conf-low" id="sp-conf-badge">LOW</span></div>
+  </div>
+
+  <div class="sp-source-panel" id="sp-source-panel">
+    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>NOAA</div>
+    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>NWS</div>
+    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>DOT</div>
+    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>EMERG MGMT</div>
+    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>ROAD CLOSURES</div>
+    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>SHELTERS</div>
+  </div>
+
+  <div class="sp-center">
+    <div class="sp-action-icon" id="sp-action-icon">⛔</div>
+    <div class="sp-action" id="sp-action-text">TAKE STORM REROUTE</div>
+    <div class="sp-reason" id="sp-reason-text">
+      A severe simulated storm cell crosses your route in about 9 minutes.
+    </div>
+    <div class="sp-placeholder-badge" id="sp-placeholder-badge">PROTOTYPE DATA · SIMULATED · NOT LIVE</div>
+
+    <div class="sp-stop-banner">
+      <div class="line-1">STOP</div>
+      <div>REASSESS CONDITIONS</div>
+      <div>WAIT FOR VERIFIED INFORMATION</div>
+    </div>
+
+    <div class="sp-offline-banner">
+      <div class="line-1">OFFLINE ACTIVE</div>
+      <div>USING CACHED RULES</div>
+      <div>NO LIVE DATA AVAILABLE</div>
+    </div>
+  </div>
+
+  <div class="sp-fallback">
+    <div class="sp-fallback-label">FALLBACK STATE</div>
+    <div class="sp-fallback-text" id="sp-fallback-text">If conditions change, Storm Path will escalate to CAUTION automatically.</div>
+  </div>
+
+</div><!-- /#screen-driver -->
+
+<!-- ════════════════════════════════════════════════
+     SCREEN 2: MAP
+     ════════════════════════════════════════════════ -->
+<div id="screen-map" class="sp-screen">
+<div class="sp-screen-title" aria-hidden="true">MAP</div>
+  <div class="map-screen-inner">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+      <div class="panel-section">
+        <div class="section-label">ROUTE OVERVIEW</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;font-family:'Courier New',monospace;">FROM</div>
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;">📍 Current Location</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;font-family:'Courier New',monospace;">TO</div>
+        <div style="font-size:0.82rem;font-weight:600;color:var(--amber);">🏁 Downtown Central Station</div>
+        <div class="route-summary" style="margin-top:12px;">
+          <div class="stat-card">
+            <div class="stat-val" id="eta-val">24</div>
+            <div class="stat-unit">MIN ETA</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" style="color:var(--cyan)" id="dist-val">8.3</div>
+            <div class="stat-unit">MILES</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" style="font-size:0.95rem;color:var(--red-alert)">MOD</div>
+            <div class="stat-unit">TRAFFIC</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" style="font-size:0.95rem;color:var(--purple-storm)">SEV</div>
+            <div class="stat-unit">WEATHER</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-label">TURN-BY-TURN</div>
+        <div id="turns-list">
+          <div class="turn-item active">
+            <div class="turn-icon">↑</div>
+            <div class="turn-info">
+              <div class="turn-street">Continue on Oak Ave</div>
+              <div class="turn-dist">0.4 mi · Straight ahead</div>
+            </div>
+          </div>
+          <div class="turn-item">
+            <div class="turn-icon">↰</div>
+            <div class="turn-info">
+              <div class="turn-street">Turn Left on Maple St</div>
+              <div class="turn-dist">1.2 mi · 3 min</div>
+            </div>
+          </div>
+          <div class="turn-item">
+            <div class="turn-icon">↱</div>
+            <div class="turn-info">
+              <div class="turn-street">Turn Right on Hwy 101</div>
+              <div class="turn-dist">2.8 mi · 8 min</div>
+            </div>
+          </div>
+          <div class="turn-item" style="border-color:rgba(255,61,61,0.3);">
+            <div class="turn-icon" style="border-color:rgba(255,61,61,0.4);background:rgba(255,61,61,0.08);">⚡</div>
+            <div class="turn-info">
+              <div class="turn-street" style="color:var(--red-alert);">⚠ Storm Zone Ahead</div>
+              <div class="turn-dist">4.1 mi · Heavy precipitation</div>
+            </div>
+          </div>
+          <div class="turn-item">
+            <div class="turn-icon">↱</div>
+            <div class="turn-info">
+              <div class="turn-street">Exit 24B — Central Blvd</div>
+              <div class="turn-dist">6.5 mi · 18 min</div>
+            </div>
+          </div>
+          <div class="turn-item">
+            <div class="turn-icon">🏁</div>
+            <div class="turn-info">
+              <div class="turn-street">Arrive Downtown Station</div>
+              <div class="turn-dist">8.3 mi · 24 min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-label">ROUTE HAZARDS</div>
+        <div class="hazard-item">
+          <div class="hazard-sev high"></div>
+          <div>
+            <div class="hazard-name">Severe Thunderstorm</div>
+            <div class="hazard-desc">Supercell at 4.1 mi. Hail &gt;1" possible. Moving NE at 28 mph.</div>
+          </div>
+        </div>
+        <div class="hazard-item">
+          <div class="hazard-sev med"></div>
+          <div>
+            <div class="hazard-name">Heavy Rain — Hydroplane Risk</div>
+            <div class="hazard-desc">2.3 mi ahead on Hwy 101. Reduce speed advisory.</div>
+          </div>
+        </div>
+        <div class="hazard-item">
+          <div class="hazard-sev med"></div>
+          <div>
+            <div class="hazard-name">Traffic Incident</div>
+            <div class="hazard-desc">Crash reported on Maple St. Right lane blocked.</div>
+          </div>
+        </div>
+        <div class="hazard-item">
+          <div class="hazard-sev low"></div>
+          <div>
+            <div class="hazard-name">Police Activity</div>
+            <div class="hazard-desc">Speed enforcement on Oak Ave. Confirmed by 3 users.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-label">CURRENT CONDITIONS</div>
+        <div class="weather-strip">
+          <div class="wx-chip">🌡 <span>74°F</span></div>
+          <div class="wx-chip">💨 <span>22 mph</span> SW</div>
+          <div class="wx-chip">💧 <span>89%</span> RH</div>
+          <div class="wx-chip">📊 <span>29.62"</span> Hg</div>
+          <div class="wx-chip">👁 <span>4 mi</span> VIS</div>
+          <div class="wx-chip">⚡ <span>ELEV</span> CAPE</div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-label">SIMULATED dBZ SCALE</div>
+        <div class="radar-legend">
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span>5</span><span>20</span><span>35</span><span>45</span><span>55</span><span>65+</span>
+          </div>
+          <div style="margin-top:6px;font-size:0.62rem;color:var(--text-secondary);line-height:1.6;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:rgba(0,100,255,0.9)">■</span> Light rain
+              <span style="color:rgba(0,255,100,0.9)">■</span> Moderate
+              <span style="color:rgba(255,200,0,0.9)">■</span> Heavy
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:rgba(255,100,0,0.9)">■</span> Very heavy
+              <span style="color:rgba(255,0,0,0.9)">■</span> Extreme
+              <span style="color:rgba(180,0,180,0.9)">■</span> Hail
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /.left-panel -->
+
+    <!-- MAP CANVAS -->
+    <div class="map-wrap" id="mapWrap">
+      <canvas id="mapCanvas"></canvas>
+      <canvas id="radarCanvas"></canvas>
+      <div class="scanlines"></div>
+      <div class="vignette"></div>
+
+      <div class="hud-compass">
+        <div class="compass-ring">
+          <span class="compass-n">N</span>
+          <div class="compass-needle"></div>
+        </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()">+</button>
+        <button class="zoom-btn" onclick="zoomOut()">−</button>
+      </div>
+
+      <div class="hud-storm-warning">
+        <span style="font-size:1.2rem">⚡</span>
+        <div>
+          <div class="warning-text">SIMULATED THUNDERSTORM SCENARIO</div>
+          <div class="warning-details">Prototype scenario · Simulated hail · Not a live warning</div>
+        </div>
+      </div>
+
+      <div class="hud-nextturn" id="nextturn-hud">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="nextturn-icon" id="nextturn-arrow">↑</div>
+          <div>
+            <div class="nextturn-dist" id="nextturn-dist">0.4 mi</div>
+            <div class="nextturn-street" id="nextturn-street">Continue on Oak Ave</div>
+            <div class="nextturn-road" id="nextturn-road">STRAIGHT AHEAD</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-speed">
+        <div class="speed-val" id="speed-display">38</div>
+        <div class="speed-unit">MPH</div>
+        <div class="speed-limit" id="speed-limit">45</div>
+      </div>
+
+      <div class="hud-radar-time" id="radar-time">RADAR · SIMULATED · LOOP: 1/6</div>
+
+      <div class="reroute-popup" id="reroute-popup">
+        <div class="reroute-title">⚡ WEATHER REROUTE AVAILABLE</div>
+        <div class="reroute-desc">StormPath detected a severe cell crossing your route at mile 4.1. An alternate route avoids the storm with +6 min added time.</div>
+        <div class="reroute-btns">
+          <button class="reroute-btn accept" onclick="acceptReroute()">✓ ACCEPT +6 MIN</button>
+          <button class="reroute-btn dismiss" onclick="document.getElementById('reroute-popup').classList.remove('show')">DISMISS</button>
+        </div>
+      </div>
+    </div><!-- /.map-wrap -->
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="panel-section">
+        <div class="section-label">RADAR SCOPE</div>
+        <div class="mini-scope">
+          <canvas id="miniRadar" width="190" height="190"></canvas>
+          <div class="scope-label">SIMULATED BASE REFLECTIVITY</div>
+        </div>
+      </div>
+
+      <div class="panel-section" style="flex:1;">
+        <div class="section-label">TRACKED STORM CELLS</div>
+        <div class="storm-cell danger" id="cell-A">
+          <div class="cell-header">
+            <span class="cell-id">CELL-A7</span>
+            <span class="cell-type severe">SUPERCELL</span>
+          </div>
+          <div class="cell-stats">
+            <div class="cell-stat">MOVEMENT<strong>NE 28mph</strong></div>
+            <div class="cell-stat">MAX dBZ<strong style="color:var(--red-alert)">68</strong></div>
+            <div class="cell-stat">HAIL<strong style="color:var(--red-alert)">1.25"</strong></div>
+            <div class="cell-stat">TOP<strong>42,500 ft</strong></div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:88%;background:var(--red-alert);"></div>
+          </div>
+          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--red-alert);margin-top:4px;">
+            ⚠ CROSSES ROUTE IN ~9 MIN
+          </div>
+        </div>
+
+        <div class="storm-cell warning" id="cell-B">
+          <div class="cell-header">
+            <span class="cell-id">CELL-B3</span>
+            <span class="cell-type moderate">MODERATE</span>
+          </div>
+          <div class="cell-stats">
+            <div class="cell-stat">MOVEMENT<strong>N 18mph</strong></div>
+            <div class="cell-stat">MAX dBZ<strong style="color:var(--amber)">52</strong></div>
+            <div class="cell-stat">HAIL<strong>NONE</strong></div>
+            <div class="cell-stat">TOP<strong>28,000 ft</strong></div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:55%;background:var(--amber);"></div>
+          </div>
+          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--amber);margin-top:4px;">
+            NEAR ROUTE — MONITOR
+          </div>
+        </div>
+
+        <div class="storm-cell" id="cell-C">
+          <div class="cell-header">
+            <span class="cell-id">CELL-C1</span>
+            <span class="cell-type light">LIGHT</span>
+          </div>
+          <div class="cell-stats">
+            <div class="cell-stat">MOVEMENT<strong>SE 12mph</strong></div>
+            <div class="cell-stat">MAX dBZ<strong style="color:var(--cyan)">32</strong></div>
+            <div class="cell-stat">HAIL<strong>NONE</strong></div>
+            <div class="cell-stat">TOP<strong>15,000 ft</strong></div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:25%;background:var(--cyan);"></div>
+          </div>
+          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim);margin-top:4px;">
+            OFF ROUTE — NO THREAT
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-label">WEATHER IMPACT</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
+            <span style="color:var(--text-secondary)">Current ETA</span>
+            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--amber)">24 min</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
+            <span style="color:var(--text-secondary)">Weather delay</span>
+            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--red-alert)">+12 min</span>
+          </div>
+          <div style="height:1px;background:var(--grid-line)"></div>
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
+            <span style="color:var(--text-secondary)">Alt. route ETA</span>
+            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--green-safe)">30 min</span>
+          </div>
+          <button onclick="document.getElementById('reroute-popup').classList.add('show')"
+            style="margin-top:6px;width:100%;padding:8px;font-family:'Courier New','Lucida Console',monospace;font-size:0.58rem;letter-spacing:2px;background:rgba(0,230,118,0.08);border:1px solid var(--green-safe);color:var(--green-safe);cursor:pointer;transition:all 0.2s;"
+            onmouseover="this.style.background='rgba(0,230,118,0.18)'"
+            onmouseout="this.style.background='rgba(0,230,118,0.08)'">
+            ⚡ STORM REROUTE
+          </button>
+        </div>
+      </div>
+    </div><!-- /.right-panel -->
+
+  </div>
+</div><!-- /#screen-map -->
+
+<!-- ════════════════════════════════════════════════
+     SCREEN 3: WEATHER
+     ════════════════════════════════════════════════ -->
+<div id="screen-weather" class="sp-screen">
+<div class="sp-screen-title" aria-hidden="true">WEATHER</div>
+  <div class="wx-screen-inner">
+
+    <div class="wx-left">
+      <div>
+        <div class="wx-title">RADAR SCOPE</div>
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <!-- PATCH: separate miniRadarWx canvas — never null-referenced while MAP screen hidden -->
+            <canvas id="miniRadarWx" width="220" height="220"
+              style="display:block;border:1px solid var(--border);border-radius:50%;background:var(--bg-deep);box-shadow:0 0 20px rgba(0,229,255,0.08);">
+            </canvas>
+            <div class="scope-label" style="margin-top:8px;">SIMULATED BASE REFLECTIVITY</div>
+          </div>
+          <div style="flex:1;min-width:180px;">
+            <div class="wx-title">dBZ SCALE</div>
+            <div class="radar-legend">
+              <div class="legend-bar"></div>
+              <div class="legend-labels">
+                <span>5</span><span>20</span><span>35</span><span>45</span><span>55</span><span>65+</span>
+              </div>
+            </div>
+            <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+              <div class="wx-title">TRACKED CELLS</div>
+              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--red-alert);">● CELL-A7 · SUPERCELL · NE 28mph · dBZ 68</div>
+              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--amber);">● CELL-B3 · MODERATE · N 18mph · dBZ 52</div>
+              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--cyan);">● CELL-C1 · LIGHT · SE 12mph · dBZ 32</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="wx-title">CURRENT CONDITIONS</div>
+        <div class="weather-strip">
+          <div class="wx-chip">🌡 <span>74°F</span></div>
+          <div class="wx-chip">💨 <span>22 mph</span> SW</div>
+          <div class="wx-chip">💧 <span>89%</span> RH</div>
+          <div class="wx-chip">📊 <span>29.62"</span> Hg</div>
+          <div class="wx-chip">👁 <span>4 mi</span> VIS</div>
+          <div class="wx-chip">⚡ <span>ELEV</span> CAPE</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="wx-title">ROUTE HAZARDS</div>
+        <div class="hazard-item">
+          <div class="hazard-sev high"></div>
+          <div>
+            <div class="hazard-name">Severe Thunderstorm</div>
+            <div class="hazard-desc">Supercell at 4.1 mi. Hail &gt;1" possible. Moving NE at 28 mph.</div>
+          </div>
+        </div>
+        <div class="hazard-item">
+          <div class="hazard-sev med"></div>
+          <div>
+            <div class="hazard-name">Heavy Rain — Hydroplane Risk</div>
+            <div class="hazard-desc">2.3 mi ahead on Hwy 101. Reduce speed advisory.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-family:'Courier New',monospace;font-size:0.58rem;letter-spacing:1.5px;padding:6px 10px;background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.2);color:rgba(255,255,255,0.4);display:inline-block;">
+        PROTOTYPE DATA · SIMULATED · NOT LIVE
+      </div>
+    </div><!-- /.wx-left -->
+
+    <div class="wx-right">
+      <div>
+        <div class="wx-title">STATE ENGINE</div>
+        <!-- PATCH: synced from driver state engine at switch time -->
+        <div class="wx-conf-row">
+          <div class="wx-conf-label">CURRENT STATE</div>
+          <div id="wx-state-mirror" style="font-family:'Courier New',monospace;font-size:0.7rem;color:var(--green-safe);font-weight:700;">NORMAL</div>
+        </div>
+        <div class="wx-conf-row" style="margin-top:6px;">
+          <div class="wx-conf-label">CONFIDENCE</div>
+          <div id="wx-conf-mirror" style="font-family:'Courier New',monospace;font-size:0.7rem;color:var(--green-safe);font-weight:700;">96% HIGH</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="wx-title">SOURCE STATUS</div>
+        <div id="wx-source-mirror" style="display:flex;flex-direction:column;gap:5px;">
+          <!-- Populated by syncWeatherPanel() -->
+        </div>
+      </div>
+
+      <div>
+        <div class="wx-title">WEATHER IMPACT</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.72rem;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary)">Current ETA</span>
+            <span style="font-family:'Courier New',monospace;color:var(--amber)">24 min</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary)">Weather delay</span>
+            <span style="font-family:'Courier New',monospace;color:var(--red-alert)">+12 min</span>
+          </div>
+          <div style="height:1px;background:var(--grid-line)"></div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--text-secondary)">Alt. ETA</span>
+            <span style="font-family:'Courier New',monospace;color:var(--green-safe)">30 min</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- /.wx-right -->
+
+  </div>
+</div><!-- /#screen-weather -->
+
+<!-- ════════════════════════════════════════════════
+     SHARED BOTTOM BAR
+     ════════════════════════════════════════════════ -->
+<div class="bottombar">
+  <div class="status-item"><div class="status-item-dot"></div> GPS PROTOTYPE · SIMULATED</div>
+  <div class="status-item"><div class="status-item-dot" style="background:var(--amber)"></div> 3 SIMULATED ALERTS</div>
+  <div class="ticker-wrap">
+    <div class="ticker">
+      ⚡ SIMULATED THUNDERSTORM SCENARIO — Prototype only · Not a live warning &nbsp;&nbsp;&nbsp;
+      🌪 SIMULATED WATCH BOX — Prototype scenario · 45 miles SW &nbsp;&nbsp;&nbsp;
+      🌧 SIMULATED FLOOD SCENARIO — Prototype only · Not a live watch &nbsp;&nbsp;&nbsp;
+      🚗 PROTOTYPE TRAFFIC DATA — Hwy 101 congestion scenario · Not live &nbsp;&nbsp;&nbsp;
+      💨 SIMULATED WIND SCENARIO — Gusts prototype data · Not a live advisory &nbsp;&nbsp;&nbsp;
+      🛑 PROTOTYPE ROAD DATA — Main St bridge scenario · Not a live closure &nbsp;&nbsp;&nbsp;
+    </div>
+  </div>
+  <div id="coords" style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim)">
+    37.7749° N, 122.4194° W
+  </div>
+</div>
+
+<!-- DEV CONTROLS -->
+<button id="sp-dev-toggle" onclick="spToggleDevPanel()">⚙ DEV</button>
+<div id="sp-dev-panel">
+  <div class="sp-dev-title">STATE SWITCHER (DEV ONLY)</div>
+  <button onclick="spSetState('normal')"  id="sp-btn-normal">NORMAL</button>
+  <button onclick="spSetState('caution')" id="sp-btn-caution">CAUTION</button>
+  <button onclick="spSetState('danger')"  id="sp-btn-danger">DANGER</button>
+  <button onclick="spSetState('stop')"    id="sp-btn-stop">STOP</button>
+  <button onclick="spSetState('safe')"    id="sp-btn-safe">SAFE MODE</button>
+  <button onclick="spSetState('offline')" id="sp-btn-offline">OFFLINE MODE</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STORMPATH V1.3.1 — RUNTIME ERROR REPAIR PATCH
+//  Root cause: three top-level canvas getContext() calls fired
+//  before their parent screen was visible; empty catch block
+//  suppressed all TypeError/IndexSizeError output; duplicate
+//  drawing calls ran on hidden/zero-sized canvases.
+// ═══════════════════════════════════════════════════════════════
+
+// ── Clock ──
+function updateClock() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Zoom state ──
+let zoomLevel = 1.0;
+
+function zoomIn()  { zoomLevel = Math.min(zoomLevel * 1.2, 3.0); if (activeScreen === 'map') drawMap(); }
+function zoomOut() { zoomLevel = Math.max(zoomLevel / 1.2, 0.5); if (activeScreen === 'map') drawMap(); }
+
+// ── Accept reroute ──
+function acceptReroute() {
+  document.getElementById('reroute-popup').classList.remove('show');
+  document.getElementById('eta-val').textContent = '30';
+  document.getElementById('dist-val').textContent = '9.8';
+  const hudNav = document.getElementById('nextturn-hud');
+  hudNav.style.borderColor = 'var(--green-safe)';
+  setTimeout(() => { hudNav.style.borderColor = 'var(--amber)'; }, 2000);
+}
+
+// ────────────────────────────────────────────────
+//  PATCH: SCREEN SWITCHING — single source of truth
+// ────────────────────────────────────────────────
+let activeScreen = 'driver';
+let animFrame = null;
+
+// ── V1.3.5 REPAIR 2: switchScreen — one-active-screen invariant ──
+// Accepts only 'driver', 'map', 'weather'. Rejects invalid names.
+// Removes .active from every .sp-screen before adding to exactly one.
+// Updates activeScreen only after the target is validated.
+// spSetState() does NOT call this; screen visibility is owned here exclusively.
+const SP_VALID_SCREENS = ['driver', 'map', 'weather'];
+
+function switchScreen(name) {
+  if (!SP_VALID_SCREENS.includes(name)) {
+    console.error('StormPath switchScreen: invalid screen name "' + name + '" — current screen preserved.');
+    return;
+  }
+  if (activeScreen === name) return;
+
+  // Cancel any running animation loop before any DOM change
+  if (animFrame !== null) {
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+  }
+
+  // Remove .active from ALL sp-screen elements (one-active invariant)
+  document.querySelectorAll('.sp-screen').forEach(s => s.classList.remove('active'));
+
+  // Update all three navigation buttons atomically
+  SP_VALID_SCREENS.forEach(s => {
+    const btn = document.getElementById('nav-btn-' + s);
+    if (btn) btn.classList.toggle('active', s === name);
+  });
+
+  // Update activeScreen only after target is validated
+  activeScreen = name;
+
+  // Activate exactly one target screen
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  // Wait one frame for layout so canvas dimensions are non-zero before draw
+  requestAnimationFrame(() => {
+    if (name === 'map') {
+      resizeCanvases();
+      requestAnimationFrame(() => {
+        drawMap();
+        drawRadar(performance.now());
+        drawMiniRadar(performance.now());
+        startLoop();
+      });
+    } else if (name === 'weather') {
+      syncWeatherPanel();
+      requestAnimationFrame(() => {
+        drawMiniRadarWx(performance.now());
+        startLoopWx();
+      });
+    }
+    // DRIVER screen: no canvas drawing needed
+  });
+}
+
+// ────────────────────────────────────────────────
+//  MAP CANVAS — Road Network
+// ────────────────────────────────────────────────
+
+// PATCH: lazy getContext — never called at top level.
+// Context retrieved only when screen is active and canvas exists.
+function getMapCtx() {
+  const c = document.getElementById('mapCanvas');
+  if (!c) return null;
+  return c.getContext('2d');
+}
+function getRadarCtx() {
+  const c = document.getElementById('radarCanvas');
+  if (!c) return null;
+  return c.getContext('2d');
+}
+function getMiniCtx() {
+  const c = document.getElementById('miniRadar');
+  if (!c) return null;
+  return c.getContext('2d');
+}
+function getMiniWxCtx() {
+  const c = document.getElementById('miniRadarWx');
+  if (!c) return null;
+  return c.getContext('2d');
+}
+
+// PATCH: resizeCanvases — guards added; only runs when MAP screen active
+function resizeCanvases() {
+  const wrap = document.getElementById('mapWrap');
+  if (!wrap) return;
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  if (!W || !H) return; // Guard: hidden screen has 0 dimensions
+
+  const mc = document.getElementById('mapCanvas');
+  const rc = document.getElementById('radarCanvas');
+  if (mc) { mc.width = W; mc.height = H; }
+  if (rc) { rc.width = W; rc.height = H; }
+}
+
+// PATCH: resize only triggers map resize when map screen is active
+window.addEventListener('resize', () => {
+  if (activeScreen === 'map') {
+    resizeCanvases();
+    drawMap();
+    drawRadar(performance.now());
+    drawMiniRadar(performance.now());
+  }
+});
+
+// PATCH: drawMap — null guard on ctx, W/H guard inside function
+function drawMap() {
+  const mapCanvas = document.getElementById('mapCanvas');
+  if (!mapCanvas) return;
+  const mCtx = getMapCtx();
+  if (!mCtx) return;
+
+  const W = mapCanvas.width, H = mapCanvas.height;
+  if (!W || !H) return; // Guard: zero-sized canvas
+
+  const cx = W / 2, cy = H / 2;
+  const Z = zoomLevel;
+  mCtx.clearRect(0, 0, W, H);
+
+  mCtx.fillStyle = '#050e18';
+  mCtx.fillRect(0, 0, W, H);
+
+  const blockColor = '#0a1828';
+  const blocks = [
+    [cx-180*Z, cy-140*Z, 60*Z, 40*Z],[cx-100*Z, cy-140*Z, 70*Z, 40*Z],
+    [cx-10*Z,  cy-140*Z, 80*Z, 40*Z],[cx+90*Z,  cy-140*Z, 60*Z, 40*Z],
+    [cx-180*Z, cy-60*Z,  50*Z, 50*Z],[cx-100*Z, cy-60*Z,  60*Z, 50*Z],
+    [cx+30*Z,  cy-60*Z,  70*Z, 50*Z],[cx+120*Z, cy-60*Z,  60*Z, 50*Z],
+    [cx-180*Z, cy+30*Z,  55*Z, 50*Z],[cx-100*Z, cy+30*Z,  65*Z, 50*Z],
+    [cx+20*Z,  cy+30*Z,  75*Z, 50*Z],[cx+120*Z, cy+30*Z,  55*Z, 50*Z],
+    [cx-180*Z, cy+120*Z, 60*Z, 45*Z],[cx-90*Z,  cy+120*Z, 70*Z, 45*Z],
+    [cx+20*Z,  cy+120*Z, 70*Z, 45*Z],[cx+120*Z, cy+120*Z, 60*Z, 45*Z],
+  ];
+
+  blocks.forEach(([x,y,w,h]) => {
+    mCtx.fillStyle = blockColor;
+    mCtx.fillRect(x, y, w, h);
+    mCtx.fillStyle = 'rgba(0,229,255,0.04)';
+    for(let r=0;r<3;r++) for(let c2=0;c2<4;c2++) {
+      if(Math.random()>0.4) mCtx.fillRect(x+6*Z+c2*(w/4.5), y+6*Z+r*(h/3.5), (w/6)*Z*0.7, (h/5)*Z*0.7);
+    }
+  });
+
+  const drawRoad = (x1,y1,x2,y2,width,color) => {
+    mCtx.beginPath(); mCtx.moveTo(x1,y1); mCtx.lineTo(x2,y2);
+    mCtx.strokeStyle = color; mCtx.lineWidth = width*Z; mCtx.stroke();
+  };
+
+  const roadColor = '#1a3040', majorColor = '#1e3a50';
+  drawRoad(0,cy-100*Z,W,cy-100*Z,8,majorColor);
+  drawRoad(0,cy-10*Z,W,cy-10*Z,10,majorColor);
+  drawRoad(0,cy+80*Z,W,cy+80*Z,8,roadColor);
+  drawRoad(0,cy+170*Z,W,cy+170*Z,6,roadColor);
+  drawRoad(cx-120*Z,0,cx-120*Z,H,8,roadColor);
+  drawRoad(cx-30*Z,0,cx-30*Z,H,10,majorColor);
+  drawRoad(cx+70*Z,0,cx+70*Z,H,8,roadColor);
+  drawRoad(cx+160*Z,0,cx+160*Z,H,6,roadColor);
+
+  mCtx.setLineDash([12*Z,8*Z]);
+  mCtx.strokeStyle='rgba(255,255,255,0.06)'; mCtx.lineWidth=1;
+  [[0,cy-100*Z,W,cy-100*Z],[0,cy-10*Z,W,cy-10*Z],[0,cy+80*Z,W,cy+80*Z],
+   [cx-120*Z,0,cx-120*Z,H],[cx-30*Z,0,cx-30*Z,H],[cx+70*Z,0,cx+70*Z,H]]
+  .forEach(([x1,y1,x2,y2])=>{mCtx.beginPath();mCtx.moveTo(x1,y1);mCtx.lineTo(x2,y2);mCtx.stroke();});
+  mCtx.setLineDash([]);
+
+  const routePoints = [
+    [cx-200*Z,cy+200*Z],[cx-120*Z,cy+200*Z],[cx-120*Z,cy+80*Z],
+    [cx-30*Z,cy+80*Z],[cx-30*Z,cy-10*Z],[cx+70*Z,cy-10*Z],
+    [cx+70*Z,cy-100*Z],[cx+200*Z,cy-100*Z],
+  ];
+
+  mCtx.beginPath();
+  routePoints.forEach(([x,y],i)=>i===0?mCtx.moveTo(x,y):mCtx.lineTo(x,y));
+  mCtx.strokeStyle='rgba(255,171,0,0.15)'; mCtx.lineWidth=22*Z; mCtx.lineJoin='round'; mCtx.stroke();
+
+  mCtx.beginPath();
+  routePoints.forEach(([x,y],i)=>i===0?mCtx.moveTo(x,y):mCtx.lineTo(x,y));
+  mCtx.strokeStyle='rgba(255,171,0,0.85)'; mCtx.lineWidth=6*Z; mCtx.lineJoin='round'; mCtx.stroke();
+
+  const t=Date.now()/300;
+  mCtx.setLineDash([18*Z,10*Z]); mCtx.lineDashOffset=-(t%(28*Z));
+  mCtx.beginPath();
+  routePoints.forEach(([x,y],i)=>i===0?mCtx.moveTo(x,y):mCtx.lineTo(x,y));
+  mCtx.strokeStyle='rgba(255,220,100,0.5)'; mCtx.lineWidth=3*Z; mCtx.stroke();
+  mCtx.setLineDash([]);
+
+  const posX=cx-120*Z, posY=cy+80*Z;
+  mCtx.beginPath(); mCtx.arc(posX,posY,28*Z,0,Math.PI*2);
+  mCtx.fillStyle='rgba(0,229,255,0.06)'; mCtx.fill();
+  mCtx.beginPath(); mCtx.moveTo(posX,posY);
+  mCtx.arc(posX,posY,50*Z,-Math.PI*0.6,-Math.PI*0.9,true); mCtx.closePath();
+  mCtx.fillStyle='rgba(0,229,255,0.08)'; mCtx.fill();
+  mCtx.beginPath(); mCtx.arc(posX,posY,10*Z,0,Math.PI*2);
+  mCtx.fillStyle='#00e5ff'; mCtx.shadowColor='#00e5ff'; mCtx.shadowBlur=20; mCtx.fill(); mCtx.shadowBlur=0;
+  mCtx.beginPath(); mCtx.arc(posX,posY,5*Z,0,Math.PI*2);
+  mCtx.fillStyle='#fff'; mCtx.fill();
+
+  const destX=cx+200*Z, destY=cy-100*Z;
+  mCtx.beginPath(); mCtx.moveTo(destX,destY);
+  mCtx.arc(destX,destY-14*Z,10*Z,0.2,Math.PI-0.2);
+  mCtx.fillStyle='rgba(255,61,61,0.15)'; mCtx.strokeStyle='#ff3d3d'; mCtx.lineWidth=2;
+  mCtx.fill(); mCtx.stroke();
+  mCtx.beginPath(); mCtx.arc(destX,destY-14*Z,4*Z,0,Math.PI*2);
+  mCtx.fillStyle='#ff3d3d'; mCtx.fill();
+
+  [{x:cx-30*Z+20*Z,y:cy+30*Z,emoji:'🚗'},{x:cx+40*Z,y:cy-10*Z,emoji:'👮'},{x:cx+70*Z,y:cy-50*Z,emoji:'⚠️'}]
+  .forEach(inc=>{
+    mCtx.font=`${16*Z}px serif`; mCtx.textAlign='center'; mCtx.textBaseline='middle';
+    mCtx.shadowColor='rgba(255,171,0,0.8)'; mCtx.shadowBlur=10;
+    mCtx.fillText(inc.emoji,inc.x,inc.y); mCtx.shadowBlur=0;
+  });
+
+  mCtx.font=`${10*Z}px 'Courier New',monospace`; mCtx.fillStyle='rgba(176,220,230,0.5)'; mCtx.textAlign='center';
+  mCtx.fillText('OAK AVE',cx-75*Z,cy+70*Z);
+  mCtx.fillText('MAPLE ST',cx-30*Z,cy+120*Z);
+  mCtx.fillText('HWY 101',cx+140*Z,cy-10*Z+12*Z);
+  mCtx.save(); mCtx.translate(cx-120*Z+14*Z,cy-30*Z); mCtx.rotate(-Math.PI/2);
+  mCtx.fillText('CENTRAL BLVD',0,0); mCtx.restore();
+
+  mCtx.fillStyle='rgba(176,220,230,0.4)';
+  mCtx.fillRect(W-140,H-30,80,2); mCtx.fillRect(W-140,H-35,2,8); mCtx.fillRect(W-61,H-35,2,8);
+  mCtx.font='10px Courier New'; mCtx.textAlign='center'; mCtx.fillText('1 MILE',W-100,H-40);
+}
+
+// ────────────────────────────────────────────────
+//  RADAR CANVAS — NEXRAD Simulation
+// ────────────────────────────────────────────────
+const stormCells = [
+  {x:80, y:-80, r:90, intensity:0.9, vx:0.8, vy:-0.4, label:'A7'},
+  {x:-140,y:60, r:60, intensity:0.55,vx:0.3, vy:-0.6, label:'B3'},
+  {x:160, y:130,r:45, intensity:0.28,vx:0.5, vy:0.5,  label:'C1'},
+];
+
+let stormTime = 0;
+
+function dBZColor(norm) {
+  const stops=[
+    [0.0,[0,0,0,0]],[0.12,[0,50,220,100]],[0.25,[0,180,255,130]],
+    [0.38,[0,255,80,140]],[0.50,[160,255,0,150]],[0.62,[255,200,0,160]],
+    [0.72,[255,100,0,175]],[0.82,[255,0,0,185]],[0.92,[180,0,220,200]],[1.00,[255,255,255,220]],
+  ];
+  for(let i=0;i<stops.length-1;i++){
+    if(norm>=stops[i][0]&&norm<=stops[i+1][0]){
+      const t=(norm-stops[i][0])/(stops[i+1][0]-stops[i][0]);
+      const c0=stops[i][1],c1=stops[i+1][1];
+      return [Math.round(c0[0]+(c1[0]-c0[0])*t),Math.round(c0[1]+(c1[1]-c0[1])*t),
+              Math.round(c0[2]+(c1[2]-c0[2])*t),Math.round(c0[3]+(c1[3]-c0[3])*t)];
+    }
+  }
+  return [0,0,0,0];
+}
+
+// PATCH: drawRadar — null guard on ctx, W/H guard, IndexSizeError guard on createImageData
+function drawRadar(timestamp) {
+  const rCanvas = document.getElementById('radarCanvas');
+  if (!rCanvas) return;
+  const rCtx = getRadarCtx();
+  if (!rCtx) return;
+
+  const W = rCanvas.width, H = rCanvas.height;
+  if (!W || !H) return; // Guard: zero-sized canvas
+
+  const cx=W/2, cy=H/2;
+  rCtx.clearRect(0,0,W,H);
+  stormTime = timestamp/1000;
+  const Z = zoomLevel;
+
+  stormCells.forEach(cell=>{
+    const px=cx+(cell.x+cell.vx*stormTime*3)*Z;
+    const py=cy+(cell.y+cell.vy*stormTime*3)*Z;
+    const R=cell.r*Z;
+    const x0=Math.max(0,Math.floor(px-R-5));
+    const y0=Math.max(0,Math.floor(py-R-5));
+    const x1=Math.min(W,Math.ceil(px+R+5));
+    const y1=Math.min(H,Math.ceil(py+R+5));
+    const iw=x1-x0, ih=y1-y0;
+    if(iw<=0||ih<=0) return; // Guard: zero-area ImageData would throw IndexSizeError
+
+    const imgData=rCtx.createImageData(iw,ih);
+    const d=imgData.data;
+
+    for(let py2=y0;py2<y1;py2++){
+      for(let px2=x0;px2<x1;px2++){
+        const dx=(px2-px)/R, dy=(py2-py)/R;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist>1.1) continue;
+        const noise=0.15*(Math.sin(dx*8+stormTime*0.8)*Math.cos(dy*6-stormTime*0.5)+Math.sin((dx+dy)*12-stormTime)*0.5);
+        const falloff=Math.max(0,1-dist*0.95);
+        const norm=Math.min(1,falloff*cell.intensity+noise*falloff);
+        const [r,g,b,a]=dBZColor(norm);
+        const idx=((py2-y0)*iw+(px2-x0))*4;
+        d[idx]=r; d[idx+1]=g; d[idx+2]=b; d[idx+3]=a;
+      }
+    }
+    rCtx.putImageData(imgData,x0,y0);
+
+    rCtx.beginPath(); rCtx.arc(px,py,R*0.9,0,Math.PI*2);
+    rCtx.strokeStyle=cell.intensity>0.7?`rgba(255,50,50,${0.3+0.2*Math.sin(stormTime*2)})`:'rgba(255,200,0,0.2)';
+    rCtx.lineWidth=2; rCtx.stroke();
+
+    const vlen=40*Z;
+    const vx=cell.vx/Math.sqrt(cell.vx*cell.vx+cell.vy*cell.vy);
+    const vy=cell.vy/Math.sqrt(cell.vx*cell.vx+cell.vy*cell.vy);
+    rCtx.beginPath(); rCtx.moveTo(px,py); rCtx.lineTo(px+vx*vlen,py+vy*vlen);
+    rCtx.strokeStyle='rgba(255,255,255,0.6)'; rCtx.lineWidth=1.5; rCtx.stroke();
+    const angle=Math.atan2(vy,vx);
+    rCtx.beginPath(); rCtx.moveTo(px+vx*vlen,py+vy*vlen);
+    rCtx.lineTo(px+vx*vlen-8*Math.cos(angle-0.4),py+vy*vlen-8*Math.sin(angle-0.4));
+    rCtx.lineTo(px+vx*vlen-8*Math.cos(angle+0.4),py+vy*vlen-8*Math.sin(angle+0.4));
+    rCtx.closePath(); rCtx.fillStyle='rgba(255,255,255,0.7)'; rCtx.fill();
+
+    rCtx.font=`bold ${11*Z}px 'Courier New',monospace`; rCtx.fillStyle='rgba(255,255,255,0.9)';
+    rCtx.textAlign='center'; rCtx.shadowColor='rgba(0,0,0,0.8)'; rCtx.shadowBlur=4;
+    rCtx.fillText(`C-${cell.label}`,px,py+R+14*Z); rCtx.shadowBlur=0;
+  });
+
+  const bgData=rCtx.createImageData(W,H);
+  const bg=bgData.data;
+  const t=stormTime;
+  for(let y=0;y<H;y+=3){
+    for(let x=0;x<W;x+=3){
+      const nx=x/W*4,ny=y/H*4;
+      const v=0.5*(Math.sin(nx*3+t*0.2)*Math.cos(ny*2)+Math.sin((nx+ny)*2-t*0.15));
+      if(v<-0.2){
+        const norm=(-v-0.2)*0.3;
+        const [r,g,b,a]=dBZColor(norm);
+        for(let dy=0;dy<3;dy++) for(let dx=0;dx<3;dx++){
+          const idx=((y+dy)*W+(x+dx))*4;
+          if(bg[idx+3]===0){bg[idx]=r;bg[idx+1]=g;bg[idx+2]=b;bg[idx+3]=a*0.5;}
+        }
+      }
+    }
+  }
+  rCtx.putImageData(bgData,0,0);
+
+  const sweepAngle=(stormTime*1.5)%(Math.PI*2);
+  const sweepR=Math.max(W,H);
+  rCtx.save(); rCtx.translate(cx,cy);
+  const fanGrad=rCtx.createLinearGradient(0,0,Math.cos(sweepAngle)*sweepR,Math.sin(sweepAngle)*sweepR);
+  fanGrad.addColorStop(0,'rgba(0,229,255,0.0)');
+  fanGrad.addColorStop(0.7,'rgba(0,229,255,0.04)');
+  fanGrad.addColorStop(1,'rgba(0,229,255,0.01)');
+  rCtx.beginPath(); rCtx.moveTo(0,0); rCtx.arc(0,0,sweepR,sweepAngle-0.4,sweepAngle,false); rCtx.closePath();
+  rCtx.fillStyle=fanGrad; rCtx.fill();
+  rCtx.beginPath(); rCtx.moveTo(0,0); rCtx.lineTo(Math.cos(sweepAngle)*sweepR,Math.sin(sweepAngle)*sweepR);
+  rCtx.strokeStyle='rgba(0,229,255,0.35)'; rCtx.lineWidth=1.5; rCtx.stroke();
+  rCtx.restore();
+
+  const radarTimeEl = document.getElementById('radar-time');
+  if (radarTimeEl) {
+    const frameNum=Math.floor(stormTime*2)%6+1;
+    radarTimeEl.textContent=`RADAR · SIM · LOOP: ${frameNum}/6`;
+  }
+}
+
+// ────────────────────────────────────────────────
+//  MINI RADAR SCOPE — MAP screen right panel
+// ────────────────────────────────────────────────
+// PATCH: drawMiniRadar — null guard on ctx and canvas, W/H guard
+function drawMiniRadar(timestamp) {
+  const miniCanvas = document.getElementById('miniRadar');
+  if (!miniCanvas) return;
+  const mrc = getMiniCtx();
+  if (!mrc) return;
+
+  const W = miniCanvas.width, H = miniCanvas.height;
+  if (!W || !H) return; // Guard: zero-sized canvas
+
+  const cx=W/2, cy=H/2, R=Math.min(cx,cy)-2;
+  mrc.clearRect(0,0,W,H);
+  mrc.save();
+  mrc.beginPath(); mrc.arc(cx,cy,R,0,Math.PI*2); mrc.clip();
+  mrc.fillStyle='#020810'; mrc.fill();
+
+  [0.25,0.5,0.75,1].forEach(f=>{
+    mrc.beginPath(); mrc.arc(cx,cy,R*f,0,Math.PI*2);
+    mrc.strokeStyle='rgba(0,229,255,0.12)'; mrc.lineWidth=1; mrc.stroke();
+  });
+  mrc.beginPath(); mrc.moveTo(cx-R,cy); mrc.lineTo(cx+R,cy);
+  mrc.moveTo(cx,cy-R); mrc.lineTo(cx,cy+R);
+  mrc.strokeStyle='rgba(0,229,255,0.12)'; mrc.lineWidth=1; mrc.stroke();
+
+  const t=timestamp/1000;
+  stormCells.forEach(cell=>{
+    const scale=R/250;
+    const px=cx+(cell.x+cell.vx*t*3)*scale;
+    const py=cy+(cell.y+cell.vy*t*3)*scale;
+    const cr=cell.r*scale;
+    const grad=mrc.createRadialGradient(px,py,0,px,py,cr);
+    const col=cell.intensity>0.7?['rgba(255,0,0,0.8)','rgba(255,100,0,0.4)','rgba(255,200,0,0.1)']:
+              cell.intensity>0.4?['rgba(255,200,0,0.7)','rgba(0,255,100,0.3)','rgba(0,200,255,0.05)']:
+              ['rgba(0,200,255,0.5)','rgba(0,100,255,0.2)','transparent'];
+    grad.addColorStop(0,col[0]); grad.addColorStop(0.5,col[1]); grad.addColorStop(1,col[2]);
+    mrc.beginPath(); mrc.arc(px,py,cr,0,Math.PI*2); mrc.fillStyle=grad; mrc.fill();
+  });
+
+  mrc.beginPath(); mrc.arc(cx-25,cy+25,4,0,Math.PI*2);
+  mrc.fillStyle='#00e5ff'; mrc.shadowColor='#00e5ff'; mrc.shadowBlur=8; mrc.fill(); mrc.shadowBlur=0;
+
+  const sweepAngle=(t*1.5)%(Math.PI*2);
+  mrc.beginPath(); mrc.moveTo(cx,cy); mrc.arc(cx,cy,R,sweepAngle-0.4,sweepAngle,false); mrc.closePath();
+  mrc.fillStyle='rgba(0,229,255,0.07)'; mrc.fill();
+  mrc.beginPath(); mrc.moveTo(cx,cy); mrc.lineTo(cx+Math.cos(sweepAngle)*R,cy+Math.sin(sweepAngle)*R);
+  mrc.strokeStyle='rgba(0,229,255,0.5)'; mrc.lineWidth=1.5; mrc.stroke();
+  mrc.restore();
+
+  mrc.beginPath(); mrc.arc(cx,cy,R,0,Math.PI*2);
+  mrc.strokeStyle='rgba(0,229,255,0.3)'; mrc.lineWidth=2; mrc.stroke();
+
+  mrc.font='9px Courier New,monospace'; mrc.textAlign='center'; mrc.fillStyle='rgba(0,229,255,0.5)';
+  mrc.fillText('N',cx,cy-R+12); mrc.fillText('S',cx,cy+R-4);
+  mrc.fillText('E',cx+R-6,cy+4); mrc.fillText('W',cx-R+6,cy+4);
+}
+
+// ────────────────────────────────────────────────
+//  MINI RADAR WX — WEATHER screen
+//  PATCH: separate canvas; only drawn when WEATHER screen is active
+// ────────────────────────────────────────────────
+function drawMiniRadarWx(timestamp) {
+  const miniCanvasWx = document.getElementById('miniRadarWx');
+  if (!miniCanvasWx) return; // Guard: canvas element missing
+  const mrcWx = getMiniWxCtx();
+  if (!mrcWx) return;
+
+  const W = miniCanvasWx.width, H = miniCanvasWx.height;
+  if (!W || !H) return; // Guard: zero-sized canvas
+
+  const cx=W/2, cy=H/2, R=Math.min(cx,cy)-2;
+  mrcWx.clearRect(0,0,W,H);
+  mrcWx.save();
+  mrcWx.beginPath(); mrcWx.arc(cx,cy,R,0,Math.PI*2); mrcWx.clip();
+  mrcWx.fillStyle='#020810'; mrcWx.fill();
+
+  [0.25,0.5,0.75,1].forEach(f=>{
+    mrcWx.beginPath(); mrcWx.arc(cx,cy,R*f,0,Math.PI*2);
+    mrcWx.strokeStyle='rgba(0,229,255,0.12)'; mrcWx.lineWidth=1; mrcWx.stroke();
+  });
+  mrcWx.beginPath(); mrcWx.moveTo(cx-R,cy); mrcWx.lineTo(cx+R,cy);
+  mrcWx.moveTo(cx,cy-R); mrcWx.lineTo(cx,cy+R);
+  mrcWx.strokeStyle='rgba(0,229,255,0.12)'; mrcWx.lineWidth=1; mrcWx.stroke();
+
+  const t=timestamp/1000;
+  stormCells.forEach(cell=>{
+    const scale=R/250;
+    const px=cx+(cell.x+cell.vx*t*3)*scale;
+    const py=cy+(cell.y+cell.vy*t*3)*scale;
+    const cr=cell.r*scale;
+    const grad=mrcWx.createRadialGradient(px,py,0,px,py,cr);
+    const col=cell.intensity>0.7?['rgba(255,0,0,0.8)','rgba(255,100,0,0.4)','rgba(255,200,0,0.1)']:
+              cell.intensity>0.4?['rgba(255,200,0,0.7)','rgba(0,255,100,0.3)','rgba(0,200,255,0.05)']:
+              ['rgba(0,200,255,0.5)','rgba(0,100,255,0.2)','transparent'];
+    grad.addColorStop(0,col[0]); grad.addColorStop(0.5,col[1]); grad.addColorStop(1,col[2]);
+    mrcWx.beginPath(); mrcWx.arc(px,py,cr,0,Math.PI*2); mrcWx.fillStyle=grad; mrcWx.fill();
+  });
+
+  mrcWx.beginPath(); mrcWx.arc(cx-30,cy+30,5,0,Math.PI*2);
+  mrcWx.fillStyle='#00e5ff'; mrcWx.shadowColor='#00e5ff'; mrcWx.shadowBlur=8; mrcWx.fill(); mrcWx.shadowBlur=0;
+
+  const sweepAngle=(t*1.5)%(Math.PI*2);
+  mrcWx.beginPath(); mrcWx.moveTo(cx,cy); mrcWx.arc(cx,cy,R,sweepAngle-0.4,sweepAngle,false); mrcWx.closePath();
+  mrcWx.fillStyle='rgba(0,229,255,0.07)'; mrcWx.fill();
+  mrcWx.beginPath(); mrcWx.moveTo(cx,cy); mrcWx.lineTo(cx+Math.cos(sweepAngle)*R,cy+Math.sin(sweepAngle)*R);
+  mrcWx.strokeStyle='rgba(0,229,255,0.5)'; mrcWx.lineWidth=1.5; mrcWx.stroke();
+  mrcWx.restore();
+
+  mrcWx.beginPath(); mrcWx.arc(cx,cy,R,0,Math.PI*2);
+  mrcWx.strokeStyle='rgba(0,229,255,0.3)'; mrcWx.lineWidth=2; mrcWx.stroke();
+
+  mrcWx.font='10px Courier New,monospace'; mrcWx.textAlign='center'; mrcWx.fillStyle='rgba(0,229,255,0.5)';
+  mrcWx.fillText('N',cx,cy-R+13); mrcWx.fillText('S',cx,cy+R-4);
+  mrcWx.fillText('E',cx+R-6,cy+5); mrcWx.fillText('W',cx-R+6,cy+5);
+}
+
+// ────────────────────────────────────────────────
+//  SPEED SIMULATION
+// ────────────────────────────────────────────────
+let simSpeed = 38;
+let speedTimer = 0;
+
+function updateSpeed(t) {
+  if (t - speedTimer > 2000) {
+    speedTimer = t;
+    simSpeed = Math.max(0, Math.min(65, simSpeed + (Math.random()-0.5)*10));
+    const el = document.getElementById('speed-display');
+    if (el) {
+      el.textContent = Math.round(simSpeed);
+      el.style.color = simSpeed > 45 * 1.1 ? 'var(--red-alert)' : 'var(--amber)';
+    }
+  }
+}
+
+// ────────────────────────────────────────────────
+//  ANIMATION LOOPS — ONE AT A TIME
+//  PATCH: separate loop functions per screen;
+//  each checks activeScreen before re-queuing.
+//  No loop runs while its screen is inactive.
+// ────────────────────────────────────────────────
+function startLoop() {
+  if (animFrame !== null) cancelAnimationFrame(animFrame);
+  function loop(timestamp) {
+    if (activeScreen !== 'map') { animFrame = null; return; }
+    try {
+      drawMap();
+      drawRadar(timestamp);
+      drawMiniRadar(timestamp);
+      updateSpeed(timestamp);
+    } catch (error) {
+      // PATCH: replaced empty catch — surface the true error
+      console.error('StormPath Runtime Error [MAP loop]:', error);
+    }
+    animFrame = requestAnimationFrame(loop);
+  }
+  animFrame = requestAnimationFrame(loop);
+}
+
+function startLoopWx() {
+  if (animFrame !== null) cancelAnimationFrame(animFrame);
+  function loopWx(timestamp) {
+    if (activeScreen !== 'weather') { animFrame = null; return; }
+    try {
+      drawMiniRadarWx(timestamp);
+    } catch (error) {
+      // PATCH: replaced empty catch — surface the true error
+      console.error('StormPath Runtime Error [WEATHER loop]:', error);
+    }
+    animFrame = requestAnimationFrame(loopWx);
+  }
+  animFrame = requestAnimationFrame(loopWx);
+}
+
+// ────────────────────────────────────────────────
+//  WEATHER SCREEN SYNC — confidence + sources
+// ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  STORMPATH V1.3.5 — PATCH COMMENT (VC-001)
+//  REPAIR 1: Initial DRIVER scenario updated to approved severe
+//            simulated route-crossing cell (state: danger,
+//            action: TAKE STORM REROUTE, confidence: LOW).
+//            Static markup and SP_STATES.danger updated to match.
+//  REPAIR 2: switchScreen() enforces one-active-screen invariant.
+//            Validates name against SP_VALID_SCREENS before acting.
+//            Removes .active from all .sp-screen elements then adds
+//            to exactly one. Updates activeScreen only after validation.
+//  REPAIR 3: spSetState() locked scope enforced. Never adds/removes
+//            screen .active classes, never changes activeScreen, never
+//            changes nav-button selection. Race safety via monotonically
+//            increasing transition token (_spStateToken). Normalized
+//            source chips and confidence via V1.3.5 helpers.
+//  REPAIR 4: runStartupSafetyChecks() deep validation: actual canvas
+//            contexts, complete state schemas, exact source key set,
+//            allowed source values, valid confidence values. spInit()
+//            initializes to approved danger scenario or SAFE MODE.
+//            SP_ALLOWED_SOURCE_STATUSES and SP_CONFIDENCE_STATES added.
+//            Helper functions: spNormalizeSourceStatuses(),
+//            spValidateConfidence(), spRenderSourceChips().
+// ══════════════════════════════════════════════════════════════
+
+// ── V1.3.5 REPAIR 4 helpers: normalize source statuses and confidence ──
+const SP_ALLOWED_SOURCE_STATUSES = ['connected', 'prototype', 'unavailable'];
+const SP_CONFIDENCE_STATES = ['high', 'medium', 'low', 'conflicting', 'stale', 'unknown'];
+
+function spNormalizeSourceStatuses(sources) {
+  // Returns a new object with all six required keys; invalid values → unavailable
+  const out = {};
+  SP_SOURCE_KEYS.forEach(key => {
+    const val = sources && sources[key];
+    out[key] = SP_ALLOWED_SOURCE_STATUSES.includes(val) ? val : 'unavailable';
+  });
+  return out;
+}
+
+function spValidateConfidence(stateData) {
+  // V1.3.5 FINAL PATCH: full confidence normalization per spec §7.3
+  // Precedence: invalid/missing → UNKNOWN; conflict → CONFLICTING; stale → STALE;
+  // otherwise numeric tier — but only with a fully valid source map.
+  // IMPORTANT: do NOT use || null — a valid percentage of 0 must not become null.
+
+  const UNKNOWN_RESULT = { confLevel: 'unknown', confLevelLabel: 'UNKNOWN', confPercent: null };
+
+  if (!stateData || typeof stateData !== 'object') return UNKNOWN_RESULT;
+
+  const level  = stateData.confLevel;
+  const label  = stateData.confLevelLabel;
+  const sources = stateData.sources;
+
+  // confLevel must be a recognized key
+  if (!SP_CONFIDENCE_STATES.includes(level)) return UNKNOWN_RESULT;
+
+  // confLevelLabel must exactly match the uppercase confidence key
+  const expectedLabel = level.toUpperCase();
+  if (typeof label !== 'string' || label !== expectedLabel) return UNKNOWN_RESULT;
+
+  // confPercent property must exist on the stateData object
+  if (!Object.prototype.hasOwnProperty.call(stateData, 'confPercent')) return UNKNOWN_RESULT;
+  const cpct = stateData.confPercent; // may be null, a number, or 0
+
+  // Parse percent to numeric (strip trailing %, allow 0)
+  let numPct = null;
+  if (cpct !== null && cpct !== undefined) {
+    const parsed = typeof cpct === 'string'
+      ? parseFloat(cpct.replace('%', ''))
+      : parseFloat(cpct);
+    numPct = isFinite(parsed) ? parsed : null;
+  }
+
+  // CONFLICTING: requires explicit conflict flag (boolean true)
+  if (level === 'conflicting') {
+    if (stateData.conflictFlag !== true) return UNKNOWN_RESULT;
+    return { confLevel: 'conflicting', confLevelLabel: 'CONFLICTING', confPercent: null };
+  }
+
+  // STALE: requires explicit stale flag (boolean true)
+  if (level === 'stale') {
+    if (stateData.staleFlag !== true) return UNKNOWN_RESULT;
+    return { confLevel: 'stale', confLevelLabel: 'STALE', confPercent: null };
+  }
+
+  // UNKNOWN: percentage must be absent or null
+  if (level === 'unknown') {
+    if (numPct !== null) return UNKNOWN_RESULT;
+    return { confLevel: 'unknown', confLevelLabel: 'UNKNOWN', confPercent: null };
+  }
+
+  // HIGH/MEDIUM/LOW: require a finite numeric percentage
+  if (numPct === null) return UNKNOWN_RESULT;
+
+  // Validate source map: must be an object with exactly the 6 required keys,
+  // no missing keys, no extra keys, and all values in the allowed set.
+  // Missing, null, incomplete, extra-key, or invalid-value source maps → UNKNOWN.
+  if (!sources || typeof sources !== 'object') return UNKNOWN_RESULT;
+
+  const srcKeys = Object.keys(sources);
+  const srcKeySet = new Set(srcKeys);
+  // Must have exactly 6 keys, no duplicates, no extras, no missing
+  if (srcKeySet.size !== SP_SOURCE_KEYS.length) return UNKNOWN_RESULT;
+  const hasAllRequired = SP_SOURCE_KEYS.every(k => srcKeySet.has(k));
+  const hasNoExtra     = srcKeys.every(k => SP_SOURCE_KEYS.includes(k));
+  if (!hasAllRequired || !hasNoExtra) return UNKNOWN_RESULT;
+  // All values must be in allowed set
+  const allValuesValid = SP_SOURCE_KEYS.every(k =>
+    SP_ALLOWED_SOURCE_STATUSES.includes(sources[k])
+  );
+  if (!allValuesValid) return UNKNOWN_RESULT;
+
+  // All six sources unavailable → UNKNOWN
+  const allUnavailable = SP_SOURCE_KEYS.every(k => sources[k] === 'unavailable');
+  if (allUnavailable) return UNKNOWN_RESULT;
+
+  // Prototype-only sources (no connected) cannot produce HIGH or MEDIUM
+  const hasConnectedSource = SP_SOURCE_KEYS.some(k => sources[k] === 'connected');
+  if (!hasConnectedSource && (level === 'high' || level === 'medium')) {
+    return UNKNOWN_RESULT;
+  }
+
+  // Numeric tier bounds
+  if (level === 'high') {
+    if (numPct < 90 || numPct > 100) return UNKNOWN_RESULT;
+    return { confLevel: 'high', confLevelLabel: 'HIGH', confPercent: cpct };
+  }
+  if (level === 'medium') {
+    if (numPct < 70 || numPct > 89) return UNKNOWN_RESULT;
+    return { confLevel: 'medium', confLevelLabel: 'MEDIUM', confPercent: cpct };
+  }
+  if (level === 'low') {
+    if (numPct < 0 || numPct > 69) return UNKNOWN_RESULT;
+    return { confLevel: 'low', confLevelLabel: 'LOW', confPercent: cpct };
+  }
+
+  return UNKNOWN_RESULT;
+}
+
+function spRenderSourceChips(containerEl, sources) {
+  if (!containerEl) return;
+  containerEl.innerHTML = '';
+  const normalized = spNormalizeSourceStatuses(sources);
+  SP_SOURCE_KEYS.forEach(key => {
+    const status = normalized[key];
+    const chip = document.createElement('div');
+    chip.className = 'sp-source-chip src-' + status;
+    chip.style.marginBottom = '4px';
+    chip.innerHTML = '<span class="sp-source-dot"></span>' + key;
+    containerEl.appendChild(chip);
+  });
+}
+
+// ── V1.3.5 REPAIR 3: syncWeatherPanel — normalized confidence and sources ──
+function syncWeatherPanel() {
+  const stateData = SP_STATES[spCurrentState];
+  if (!stateData) return;
+
+  const stateEl = document.getElementById('wx-state-mirror');
+  const confEl  = document.getElementById('wx-conf-mirror');
+  const srcEl   = document.getElementById('wx-source-mirror');
+
+  if (stateEl) stateEl.textContent = stateData.label;
+
+  if (confEl) {
+    const conf = spValidateConfidence(stateData);
+    // CORRECTION 1: zero-safe check — do not use || (valid 0 would become falsy)
+    confEl.textContent = (conf.confPercent !== null && conf.confPercent !== undefined)
+      ? (conf.confPercent + ' ' + conf.confLevelLabel)
+      : ('N/A ' + conf.confLevelLabel);
+  }
+
+  if (srcEl) spRenderSourceChips(srcEl, stateData.sources);
+}
+
+// ── Reroute popup after 4s (only while MAP is active) ──
+setTimeout(() => {
+  if (activeScreen === 'map') {
+    const popup = document.getElementById('reroute-popup');
+    if (popup) popup.classList.add('show');
+  }
+}, 4000);
+
+// ════════════════════════════════════════════════════
+//  STORM PATH — DRIVER OVERLAY STATE ENGINE
+// ════════════════════════════════════════════════════
+
+const SP_THRESHOLDS = {
+  HIGH:   { min:90, max:100, label:'HIGH',   allowedState:'normal' },
+  MEDIUM: { min:70, max:89,  label:'MEDIUM', allowedState:'caution' },
+  LOW:    { min:0,  max:69,  label:'LOW',    allowedState:'safe' }
+  // CONFLICTING, STALE, UNKNOWN handled by explicit flag overrides, not numeric range
+};
+
+const SP_SOURCE_KEYS = ['NOAA','NWS','DOT','EMERG MGMT','ROAD CLOSURES','SHELTERS'];
+
+// V1.3.5 REPAIR 4: complete runtime state definitions.
+// danger is the approved initial scenario per spec section 4.1.
+// Prototype-only sources cannot produce HIGH or MEDIUM confidence (spec §7.3).
+// Trusted-source and live-data language removed from all states.
+// 'simulated' remains in reason where required by spec §4.1.
+const SP_STATES = {
+  normal: {
+    label:'NORMAL', confPercent:null, confLevel:'unknown', confLevelLabel:'UNKNOWN',
+    icon:'✓', action:'CONTINUE ROUTE',
+    reason:'No simulated hazards detected on your route. Prototype data only — not live.',
+    fallback:'If conditions change, Storm Path will escalate to CAUTION automatically.',
+    showPlaceholder:true,
+    sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
+  },
+  caution: {
+    label:'CAUTION', confPercent:0, confLevel:'low', confLevelLabel:'LOW',
+    icon:'⚠', action:'REDUCE SPEED',
+    reason:'Simulated data indicates elevated risk ahead on your route. Prototype only — not live.',
+    fallback:'If risk increases, Storm Path will escalate to DANGER. If data quality drops, Storm Path will enter SAFE MODE.',
+    showPlaceholder:true,
+    sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'unavailable','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
+  },
+  danger: {
+    // V1.3.5 REPAIR 1: approved initial severe simulated scenario (spec §4.1)
+    label:'DANGER', confPercent:0, confLevel:'low', confLevelLabel:'LOW',
+    icon:'⛔', action:'TAKE STORM REROUTE',
+    reason:'A severe simulated storm cell crosses your route in about 9 minutes.',
+    fallback:'Take the simulated storm reroute now. Storm Path will monitor for route clearance.',
+    showPlaceholder:true,
+    sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
+  },
+  stop: {
+    label:'STOP', confPercent:0, confLevel:'low', confLevelLabel:'LOW',
+    icon:'🛑', action:'STOP NOW — REASSESS',
+    reason:'Simulated conditions ahead require an immediate stop before continuing.',
+    fallback:'Remain stopped until Storm Path confirms a safe action, or follow official emergency guidance if present.',
+    showPlaceholder:true,
+    sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
+  },
+  safe: {
+    label:'SAFE MODE', confPercent:null, confLevel:'unknown', confLevelLabel:'UNKNOWN',
+    icon:'◈', action:'PROCEED WITH CAUTION',
+    reason:'Source data is low-confidence, conflicting, or stale. Storm Path has reduced complexity and increased conservatism.',
+    fallback:'Storm Path will not increase confidence until trusted source data improves. Defaulting to the most conservative available action.',
+    showPlaceholder:true,
+    sources:{'NOAA':'prototype','NWS':'unavailable','DOT':'prototype','EMERG MGMT':'unavailable','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
+  },
+  offline: {
+    label:'OFFLINE MODE', confPercent:null, confLevel:'unknown', confLevelLabel:'UNKNOWN',
+    icon:'⭘', action:'USE CACHED ROUTE',
+    reason:'Connectivity to trusted sources has been lost. Storm Path is using the last cached rules and fallback instructions.',
+    fallback:'Reconnect when possible. Until then, treat all conditions as unconfirmed and drive conservatively.',
+    showPlaceholder:true,
+    sources:{'NOAA':'unavailable','NWS':'unavailable','DOT':'unavailable','EMERG MGMT':'unavailable','ROAD CLOSURES':'unavailable','SHELTERS':'unavailable'}
+  }
+};
+
+// V1.3.5 REPAIR 1: initial state is the approved severe simulated scenario
+let spCurrentState = 'danger';
+
+// V1.3.5 REPAIR 2+3: spSetState — locked scope enforced.
+// NEVER adds/removes screen .active classes.
+// NEVER changes activeScreen.
+// NEVER changes navigation button selection.
+// Screen visibility owned exclusively by switchScreen() and startup SAFE MODE handling.
+// Race safety: monotonically increasing token; older callbacks are no-ops.
+let _spStateToken = 0;
+
+function spSetState(stateKey) {
+  if (!SP_STATES[stateKey]) {
+    console.error('StormPath spSetState: invalid state key "' + stateKey + '" — state preserved.');
+    return;
+  }
+  spCurrentState = stateKey;
+  const data = SP_STATES[stateKey];
+
+  // Claim this transition slot; any older pending setTimeout will see a stale token
+  const myToken = ++_spStateToken;
+
+  const screen = document.getElementById('screen-driver');
+  if (!screen) return;
+  const center = screen.querySelector('.sp-center');
+  const fallbackBox = screen.querySelector('.sp-fallback');
+
+  if (center) center.classList.add('sp-fade');
+  if (fallbackBox) fallbackBox.classList.add('sp-fade');
+
+  setTimeout(() => {
+    // Stale callback guard — only the latest requested state renders
+    if (myToken !== _spStateToken) return;
+
+    // Update DRIVER visual state class ONLY — never .active, never screen visibility
+    const currentClasses = screen.className;
+    screen.className = currentClasses
+      .replace(/\bstate-\w+\b/g, '')
+      .trim() + ' state-' + stateKey;
+
+    const stateLabel = document.getElementById('sp-state-label');
+    if (stateLabel) stateLabel.textContent = data.label;
+
+    const confLabelEl = document.getElementById('sp-conf-label');
+    const confBadge   = document.getElementById('sp-conf-badge');
+    const conf = spValidateConfidence(data);
+    if (confLabelEl && confLabelEl.childNodes.length) {
+      // CORRECTION 1: zero-safe — do not use || (valid 0 would become falsy)
+      confLabelEl.childNodes[0].textContent = (conf.confPercent !== null && conf.confPercent !== undefined)
+        ? ('CONFIDENCE: ' + conf.confPercent)
+        : 'CONFIDENCE: N/A';
+    }
+    if (confBadge) {
+      confBadge.textContent = conf.confLevelLabel;
+      confBadge.className   = 'sp-conf-badge conf-' + conf.confLevel;
+    }
+
+    const actionIcon   = document.getElementById('sp-action-icon');
+    const actionText   = document.getElementById('sp-action-text');
+    const reasonText   = document.getElementById('sp-reason-text');
+    const fallbackText = document.getElementById('sp-fallback-text');
+    const placeholder  = document.getElementById('sp-placeholder-badge');
+
+    if (actionIcon)   actionIcon.textContent   = data.icon;
+    if (actionText)   actionText.textContent   = data.action;
+    if (reasonText)   reasonText.textContent   = data.reason;
+    if (fallbackText) fallbackText.textContent = data.fallback;
+    if (placeholder)  placeholder.style.display = data.showPlaceholder ? 'inline-block' : 'none';
+
+    const panel = document.getElementById('sp-source-panel');
+    if (panel) spRenderSourceChips(panel, data.sources);
+
+    if (center) center.classList.remove('sp-fade');
+    if (fallbackBox) fallbackBox.classList.remove('sp-fade');
+
+    // Sync WEATHER mirror if weather is currently visible — never changes which screen is active
+    if (activeScreen === 'weather') syncWeatherPanel();
+
+  }, 220);
+
+  // Update DEV panel active button (immediate, outside transition)
+  document.querySelectorAll('#sp-dev-panel button[id^="sp-btn-"]').forEach(b => b.classList.remove('active-state'));
+  const activeBtn = document.getElementById('sp-btn-' + stateKey);
+  if (activeBtn) activeBtn.classList.add('active-state');
+}
+
+function spToggleDevPanel() {
+  document.getElementById('sp-dev-panel').classList.toggle('show');
+}
+
+// ────────────────────────────────────────────────
+//  STORMPATH V1.3.3 — STARTUP SAFETY CHECKS (prior)
+//  V1.3.5 REPAIR 4: expanded to deep validation per spec §10
+//  Any failure starts the DRIVER screen in SAFE MODE.
+// ────────────────────────────────────────────────
+const SP_STARTUP_SAFE_FALLBACK = {
+  label: 'SAFE MODE',
+  confPercent: null,
+  confLevel: 'unknown',
+  confLevelLabel: 'UNKNOWN',
+  icon: '◈',
+  action: 'PROCEED WITH CAUTION',
+  reason: 'A required Storm Path component did not initialize correctly.',
+  fallback: 'Remain in SAFE MODE until the missing component is restored.',
+  showPlaceholder: true,
+  sources: {
+    'NOAA': 'unavailable', 'NWS': 'unavailable', 'DOT': 'unavailable',
+    'EMERG MGMT': 'unavailable', 'ROAD CLOSURES': 'unavailable', 'SHELTERS': 'unavailable'
+  }
+};
+
+// V1.3.5 QC CORRECTION 2+3+5: deep startup validation — every required state
+// validated for complete source schema and confidence data
+function runStartupSafetyChecks() {
+  const failures = [];
+
+  // §10.1 — Canvas validation: existence, type, callable getContext, non-null 2d context.
+  // Hidden-screen zero dimensions must NOT count as startup failure.
+  const requiredCanvasIds = ['mapCanvas', 'radarCanvas', 'miniRadar', 'miniRadarWx'];
+  const canvasResults = requiredCanvasIds.map(id => {
+    try {
+      const c = document.getElementById(id);
+      if (!c || !(c instanceof HTMLCanvasElement)) return { id, ok: false, reason: 'missing or not canvas' };
+      if (typeof c.getContext !== 'function') return { id, ok: false, reason: 'getContext not callable' };
+      const ctx = c.getContext('2d');
+      if (!ctx) return { id, ok: false, reason: 'getContext returned null' };
+      return { id, ok: true };
+    } catch (e) {
+      return { id, ok: false, reason: String(e) };
+    }
+  });
+  const canvasFailed = canvasResults.filter(r => !r.ok);
+  if (canvasFailed.length > 0) failures.push('CANVAS');
+
+  // §10.2 — State-engine validation: all 6 keys present with required fields
+  const requiredStateKeys = ['normal', 'caution', 'danger', 'stop', 'safe', 'offline'];
+  const requiredStateFields = ['label', 'icon', 'action', 'reason', 'fallback', 'showPlaceholder'];
+  let stateReady = typeof SP_STATES === 'object' && SP_STATES !== null;
+  if (stateReady) {
+    stateReady = requiredStateKeys.every(k => {
+      const s = SP_STATES[k];
+      if (!s || typeof s !== 'object') return false;
+      return requiredStateFields.every(f => Object.prototype.hasOwnProperty.call(s, f));
+    });
+  }
+  // Default runtime state (danger) must exist
+  const defaultStateKey = 'danger';
+  if (stateReady && !SP_STATES[defaultStateKey]) stateReady = false;
+  if (!stateReady) failures.push('STATE');
+
+  // CORRECTION 3: validate source schema for EVERY required state (not only default)
+  // Each state must have exactly the 6 required keys, no extras, no missing, valid values
+  let sourceReady = Array.isArray(SP_SOURCE_KEYS) && SP_SOURCE_KEYS.length === 6;
+  if (sourceReady) {
+    const masterKeySet = new Set(SP_SOURCE_KEYS);
+    // No duplicates in SP_SOURCE_KEYS itself
+    sourceReady = masterKeySet.size === 6 && SP_SOURCE_KEYS.every(k => typeof k === 'string');
+  }
+
+  if (sourceReady && stateReady) {
+    for (const stateKey of requiredStateKeys) {
+      const stateObj = SP_STATES[stateKey];
+      if (!stateObj) { sourceReady = false; break; }
+
+      const src = stateObj.sources;
+      if (!src || typeof src !== 'object') { sourceReady = false; break; }
+
+      // Exactly the 6 required keys — no missing, no extra
+      const srcKeys = Object.keys(src);
+      const srcKeySet = new Set(srcKeys);
+      if (srcKeySet.size !== 6) { sourceReady = false; break; }           // extra or duplicate
+      const hasAllRequired = SP_SOURCE_KEYS.every(k => srcKeySet.has(k));
+      const hasNoExtra = srcKeys.every(k => SP_SOURCE_KEYS.includes(k));
+      if (!hasAllRequired || !hasNoExtra) { sourceReady = false; break; }
+
+      // All values must be in allowed set
+      const allValuesValid = SP_SOURCE_KEYS.every(k =>
+        SP_ALLOWED_SOURCE_STATUSES.includes(src[k])
+      );
+      if (!allValuesValid) { sourceReady = false; break; }
+    }
+  }
+
+  // SP_STARTUP_SAFE_FALLBACK source map must also be valid:
+  // exactly 6 required keys, no extras, no missing, all values allowed
+  if (sourceReady) {
+    const fbSrc = SP_STARTUP_SAFE_FALLBACK.sources;
+    if (!fbSrc || typeof fbSrc !== 'object') {
+      sourceReady = false;
+    } else {
+      const fbKeys = Object.keys(fbSrc);
+      const allRequired = SP_SOURCE_KEYS.every(k =>
+        Object.prototype.hasOwnProperty.call(fbSrc, k) &&
+        SP_ALLOWED_SOURCE_STATUSES.includes(fbSrc[k])
+      );
+      const noExtra = fbKeys.every(k => SP_SOURCE_KEYS.includes(k));
+      sourceReady = allRequired && noExtra;
+    }
+  }
+  if (!sourceReady) failures.push('SOURCE');
+
+  // CORRECTION 2: validate confidence for EVERY required state
+  // Inline validation logic matching spec §7.3 exactly (mirrors spValidateConfidence rules)
+  let confidenceReady = stateReady;
+  if (confidenceReady) {
+    for (const stateKey of requiredStateKeys) {
+      const s = SP_STATES[stateKey];
+      if (!s) { confidenceReady = false; break; }
+
+      const cl     = s.confLevel;
+      const clLabel = s.confLevelLabel;
+      const hasPct  = Object.prototype.hasOwnProperty.call(s, 'confPercent');
+      const cpct    = s.confPercent;
+
+      // confLevel must be recognized
+      if (!SP_CONFIDENCE_STATES.includes(cl)) { confidenceReady = false; break; }
+
+      // confLevelLabel must exactly match uppercase key
+      if (typeof clLabel !== 'string' || clLabel !== cl.toUpperCase()) {
+        confidenceReady = false; break;
+      }
+
+      // Parse numeric value (strip %, allow 0)
+      // Note: hasPct check is intentionally deferred until after UNKNOWN branch —
+      // UNKNOWN is valid when confPercent is absent or null (property need not exist).
+      let numPct = null;
+      if (cpct !== null && cpct !== undefined) {
+        const parsed = typeof cpct === 'string'
+          ? parseFloat(cpct.replace('%', ''))
+          : parseFloat(cpct);
+        numPct = isFinite(parsed) ? parsed : null;
+      }
+
+      // CONFLICTING: requires explicit conflict flag
+      if (cl === 'conflicting') {
+        if (s.conflictFlag !== true) { confidenceReady = false; break; }
+        continue;
+      }
+      // STALE: requires explicit stale flag
+      if (cl === 'stale') {
+        if (s.staleFlag !== true) { confidenceReady = false; break; }
+        continue;
+      }
+      // UNKNOWN: confPercent must be absent or null (property need not exist)
+      if (cl === 'unknown') {
+        if (numPct !== null) { confidenceReady = false; break; }
+        continue; // absent or null percent is valid for UNKNOWN
+      }
+
+      // LOW/MEDIUM/HIGH: confPercent property must exist and be finite.
+      if (!hasPct) { confidenceReady = false; break; }
+
+      // LOW/MEDIUM/HIGH: all require a finite numeric percentage.
+      // No exception for prototype-only sources — per V1.3.5 final patch spec.
+      if (numPct === null) { confidenceReady = false; break; }
+
+      // Numeric tier bounds
+      if (cl === 'high'   && (numPct < 90 || numPct > 100)) { confidenceReady = false; break; }
+      if (cl === 'medium' && (numPct < 70 || numPct > 89))  { confidenceReady = false; break; }
+      if (cl === 'low'    && (numPct < 0  || numPct > 69))  { confidenceReady = false; break; }
+
+      // HIGH or MEDIUM not allowed with prototype-only sources
+      if (cl === 'high' || cl === 'medium') {
+        const startupSrc = s.sources;
+        const startupHasSrc = startupSrc && typeof startupSrc === 'object';
+        const startupHasConnected = startupHasSrc
+          ? SP_SOURCE_KEYS.some(k => startupSrc[k] === 'connected')
+          : false;
+        if (!startupHasConnected) { confidenceReady = false; break; }
+      }
+    }
+  }
+  if (!confidenceReady) failures.push('CONFIDENCE');
+
+  return { passed: failures.length === 0, failures, canvasFailed };
+}
+
+// V1.3.5 QC CORRECTION 4: spInit always uses SP_STARTUP_SAFE_FALLBACK on failure
+// — never prefers SP_STATES.safe during startup-failure recovery
+(function spInit() {
+  const startup = runStartupSafetyChecks();
+  const useSafeMode = !startup.passed;
+
+  // CORRECTION 4: on any failure, use SP_STARTUP_SAFE_FALLBACK exclusively.
+  // All six source statuses will be unavailable; confidence will be UNKNOWN.
+  const data = useSafeMode ? SP_STARTUP_SAFE_FALLBACK : SP_STATES.danger;
+
+  spCurrentState = useSafeMode ? 'safe' : 'danger';
+
+  if (useSafeMode) {
+    // §10.5: one consolidated warning with all failure codes
+    console.warn('StormPath startup safety checks failed — entering SAFE MODE. Failures: ' + startup.failures.join(', '));
+  }
+
+  document.documentElement.dataset.spStartup = useSafeMode ? 'safe' : 'ready';
+
+  const screen = document.getElementById('screen-driver');
+  if (!screen) return; // avoid uncaught exception if DOM missing
+
+  // Startup SAFE MODE handling sets DRIVER active — the one permitted exception per spec §8
+  screen.className = 'sp-screen active state-' + (useSafeMode ? 'safe' : 'danger');
+
+  const stateLabel = document.getElementById('sp-state-label');
+  if (stateLabel) stateLabel.textContent = data.label;
+
+  const confLabelEl = document.getElementById('sp-conf-label');
+  const confBadge   = document.getElementById('sp-conf-badge');
+  const conf = spValidateConfidence(data);
+  if (confLabelEl && confLabelEl.childNodes.length) {
+    // CORRECTION 1: use conf.confPercent directly — not || null (zero is valid)
+    confLabelEl.childNodes[0].textContent = (conf.confPercent !== null && conf.confPercent !== undefined)
+      ? 'CONFIDENCE: ' + conf.confPercent
+      : 'CONFIDENCE: N/A';
+  }
+  if (confBadge) {
+    confBadge.textContent = conf.confLevelLabel;
+    confBadge.className   = 'sp-conf-badge conf-' + conf.confLevel;
+  }
+
+  const actionIcon    = document.getElementById('sp-action-icon');
+  const actionText    = document.getElementById('sp-action-text');
+  const reasonText    = document.getElementById('sp-reason-text');
+  const fallbackText  = document.getElementById('sp-fallback-text');
+  const placeholderBadge = document.getElementById('sp-placeholder-badge');
+
+  if (actionIcon)   actionIcon.textContent   = data.icon;
+  if (actionText)   actionText.textContent   = data.action;
+  if (reasonText)   reasonText.textContent   = data.reason;
+  if (fallbackText) fallbackText.textContent = data.fallback;
+  if (placeholderBadge) {
+    placeholderBadge.style.display = data.showPlaceholder ? 'inline-block' : 'none';
+  }
+
+  const panel = document.getElementById('sp-source-panel');
+  if (panel) spRenderSourceChips(panel, data.sources);
+
+  const activeDevButton = document.getElementById(useSafeMode ? 'sp-btn-safe' : 'sp-btn-danger');
+  if (activeDevButton) activeDevButton.classList.add('active-state');
+
+  // DRIVER is active at startup. MAP and WEATHER loops remain lazy-loaded.
+})();
+</script>
+
+</body>
+</html>
