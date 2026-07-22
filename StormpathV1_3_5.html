@@ -2019,12 +2019,12 @@ body {
       <div class="panel-section">
         <div class="section-label">CURRENT CONDITIONS</div>
         <div class="weather-strip">
-          <div class="wx-chip">🌡 <span>74°F</span></div>
-          <div class="wx-chip">💨 <span>22 mph</span> SW</div>
-          <div class="wx-chip">💧 <span>89%</span> RH</div>
-          <div class="wx-chip">📊 <span>29.62"</span> Hg</div>
-          <div class="wx-chip">👁 <span>4 mi</span> VIS</div>
-          <div class="wx-chip">⚡ <span>ELEV</span> CAPE</div>
+          <div class="wx-chip">🌡 <span class="wx-val-temp">--</span></div>
+          <div class="wx-chip">💨 <span class="wx-val-wind-speed">--</span> <span class="wx-val-wind-dir">--</span></div>
+          <div class="wx-chip">💧 <span class="wx-val-humidity">--</span> RH</div>
+          <div class="wx-chip">📊 <span class="wx-val-pressure">--</span> Hg</div>
+          <div class="wx-chip">👁 <span class="wx-val-visibility">--</span> VIS</div>
+          <div class="wx-chip">⚡ <span class="wx-val-cape">--</span> CAPE</div>
         </div>
       </div>
 
@@ -2245,12 +2245,12 @@ body {
       <div>
         <div class="wx-title">CURRENT CONDITIONS</div>
         <div class="weather-strip">
-          <div class="wx-chip">🌡 <span>74°F</span></div>
-          <div class="wx-chip">💨 <span>22 mph</span> SW</div>
-          <div class="wx-chip">💧 <span>89%</span> RH</div>
-          <div class="wx-chip">📊 <span>29.62"</span> Hg</div>
-          <div class="wx-chip">👁 <span>4 mi</span> VIS</div>
-          <div class="wx-chip">⚡ <span>ELEV</span> CAPE</div>
+          <div class="wx-chip">🌡 <span class="wx-val-temp">--</span></div>
+          <div class="wx-chip">💨 <span class="wx-val-wind-speed">--</span> <span class="wx-val-wind-dir">--</span></div>
+          <div class="wx-chip">💧 <span class="wx-val-humidity">--</span> RH</div>
+          <div class="wx-chip">📊 <span class="wx-val-pressure">--</span> Hg</div>
+          <div class="wx-chip">👁 <span class="wx-val-visibility">--</span> VIS</div>
+          <div class="wx-chip">⚡ <span class="wx-val-cape">--</span> CAPE</div>
         </div>
       </div>
 
@@ -2326,15 +2326,10 @@ body {
      ════════════════════════════════════════════════ -->
 <div class="bottombar">
   <div class="status-item"><div class="status-item-dot" id="gps-status-dot"></div> <span id="gps-status-label">GPS ACQUIRING…</span></div>
-  <div class="status-item"><div class="status-item-dot" style="background:var(--amber)"></div> 3 SIMULATED ALERTS</div>
+  <div class="status-item"><div class="status-item-dot" style="background:var(--amber)"></div> <span id="wx-alert-count">AWAITING GPS FIX</span></div>
   <div class="ticker-wrap">
-    <div class="ticker">
-      ⚡ SIMULATED THUNDERSTORM SCENARIO — Prototype only · Not a live warning &nbsp;&nbsp;&nbsp;
-      🌪 SIMULATED WATCH BOX — Prototype scenario · 45 miles SW &nbsp;&nbsp;&nbsp;
-      🌧 SIMULATED FLOOD SCENARIO — Prototype only · Not a live watch &nbsp;&nbsp;&nbsp;
-      🚗 PROTOTYPE TRAFFIC DATA — Hwy 101 congestion scenario · Not live &nbsp;&nbsp;&nbsp;
-      💨 SIMULATED WIND SCENARIO — Gusts prototype data · Not a live advisory &nbsp;&nbsp;&nbsp;
-      🛑 PROTOTYPE ROAD DATA — Main St bridge scenario · Not a live closure &nbsp;&nbsp;&nbsp;
+    <div class="ticker" id="wx-ticker-content">
+      AWAITING GPS FIX FOR LIVE NWS ALERTS…
     </div>
   </div>
   <div id="coords" style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim)">
@@ -3585,6 +3580,7 @@ function spUpdateCoordsDisplay() {
 }
 
 function spOnPositionSuccess(pos) {
+  const hadFixBefore = spGPSAvailable;
   spCoords.lat = pos.coords.latitude;
   spCoords.lon = pos.coords.longitude;
   spCoords.accuracy = pos.coords.accuracy;
@@ -3592,6 +3588,9 @@ function spOnPositionSuccess(pos) {
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
   spUpdateCoordsDisplay();
   if (activeScreen === 'map') drawMap();
+  // Weather is only ever fetched once a real GPS fix exists, and only once
+  // per session (not on every watchPosition tick) to avoid hammering NWS.
+  if (!hadFixBefore) spFetchWeather(spCoords.lat, spCoords.lon);
 }
 
 // Any GPS failure (permission denied, position unavailable, timeout) is
@@ -3627,6 +3626,135 @@ function spInitGeolocation() {
 }
 
 spInitGeolocation();
+
+// ────────────────────────────────────────────────
+//  REAL NWS WEATHER — replaces hardcoded 74°F / 22 mph SW / 89% RH /
+//  29.62" Hg / 4 mi VIS / ELEV CAPE and the simulated alert ticker.
+//  Flow (api.weather.gov, no API key required):
+//    1. GET /points/{lat},{lon}                        → forecast office + grid cell
+//    2. GET /gridpoints/{office}/{gridX},{gridY}/forecast → current conditions
+//    3. GET /alerts/active?point={lat},{lon}            → real active alerts
+//  Only ever runs once a real GPS fix exists (called from
+//  spOnPositionSuccess) — never fetched against fake/placeholder coords.
+//  Any failure (browser-blocked User-Agent, NWS 403/429, network error,
+//  malformed response) is logged via console.warn with the specific reason
+//  and routed into the same SAFE MODE pathway as GPS failure handling.
+// ────────────────────────────────────────────────
+
+// NWS asks API consumers to identify their app + contact info in the
+// User-Agent so they can reach out about problem traffic. Note: browsers
+// treat "User-Agent" as a forbidden header and silently drop it from
+// fetch() requests rather than throwing — NWS's own guidance for browser
+// clients is that this is expected, and a resulting 403 is handled below
+// exactly like an explicit block.
+const SP_NWS_USER_AGENT = 'StormPath-Prototype/1.3.5 (weather safety prototype; dominic.calandro1991@yahoo.com)';
+let spWeatherFetchStarted = false;
+
+async function spNWSFetch(url) {
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: {
+        'User-Agent': SP_NWS_USER_AGENT,
+        'Accept': 'application/geo+json'
+      }
+    });
+  } catch (err) {
+    throw new Error('network error contacting api.weather.gov — ' + err.message);
+  }
+  if (res.status === 403) {
+    throw new Error('api.weather.gov returned 403 Forbidden for ' + url + ' — request blocked (User-Agent rejected or missing)');
+  }
+  if (res.status === 429) {
+    throw new Error('api.weather.gov returned 429 Too Many Requests for ' + url + ' — rate limited');
+  }
+  if (!res.ok) {
+    throw new Error('api.weather.gov returned HTTP ' + res.status + ' ' + res.statusText + ' for ' + url);
+  }
+  return res.json();
+}
+
+function spUpdateWeatherChips(data) {
+  const setAll = (cls, text) => document.querySelectorAll('.' + cls).forEach(el => { el.textContent = text; });
+  setAll('wx-val-temp', data.tempDisplay);
+  setAll('wx-val-wind-speed', data.windSpeedDisplay);
+  setAll('wx-val-wind-dir', data.windDirDisplay);
+  setAll('wx-val-humidity', data.humidityDisplay);
+  setAll('wx-val-pressure', data.pressureDisplay);
+  setAll('wx-val-visibility', data.visibilityDisplay);
+  setAll('wx-val-cape', data.capeDisplay);
+}
+
+function spUpdateAlertTicker(alerts) {
+  const countEl  = document.getElementById('wx-alert-count');
+  const tickerEl = document.getElementById('wx-ticker-content');
+  if (countEl) {
+    countEl.textContent = alerts.length === 0
+      ? 'NO ACTIVE NWS ALERTS'
+      : alerts.length + (alerts.length === 1 ? ' ACTIVE NWS ALERT' : ' ACTIVE NWS ALERTS');
+  }
+  if (tickerEl) {
+    if (alerts.length === 0) {
+      tickerEl.textContent = '✓ NO ACTIVE NWS ALERTS FOR THIS LOCATION — SOURCE: api.weather.gov';
+    } else {
+      tickerEl.textContent = alerts.map(a => {
+        const p = a.properties || {};
+        return '⚠ ' + (p.event || 'NWS ALERT') + ' — ' + (p.headline || p.areaDesc || 'See weather.gov for details');
+      }).join('     ');
+    }
+  }
+}
+
+async function spFetchWeather(lat, lon) {
+  if (spWeatherFetchStarted) return;
+  spWeatherFetchStarted = true;
+  try {
+    const latQ = lat.toFixed(4), lonQ = lon.toFixed(4);
+
+    const points = await spNWSFetch('https://api.weather.gov/points/' + latQ + ',' + lonQ);
+    const pointProps = points && points.properties;
+    const office = pointProps && pointProps.gridId;
+    const gridX  = pointProps && pointProps.gridX;
+    const gridY  = pointProps && pointProps.gridY;
+    if (!office || gridX === undefined || gridY === undefined) {
+      throw new Error('NWS /points response missing gridId/gridX/gridY');
+    }
+
+    const [forecast, alertsResp] = await Promise.all([
+      spNWSFetch('https://api.weather.gov/gridpoints/' + office + '/' + gridX + ',' + gridY + '/forecast'),
+      spNWSFetch('https://api.weather.gov/alerts/active?point=' + latQ + ',' + lonQ)
+    ]);
+
+    const period = forecast && forecast.properties && forecast.properties.periods && forecast.properties.periods[0];
+    if (!period) throw new Error('NWS forecast response contained no forecast periods');
+
+    const humidityVal = period.relativeHumidity && typeof period.relativeHumidity.value === 'number'
+      ? Math.round(period.relativeHumidity.value) + '%'
+      : 'N/A';
+
+    spUpdateWeatherChips({
+      tempDisplay: (typeof period.temperature === 'number')
+        ? period.temperature + '°' + (period.temperatureUnit || 'F')
+        : 'N/A',
+      windSpeedDisplay: period.windSpeed || 'N/A',
+      windDirDisplay: period.windDirection || '',
+      humidityDisplay: humidityVal,
+      // The NWS gridpoint forecast endpoint does not publish barometric
+      // pressure, visibility, or CAPE — shown as N/A rather than invented.
+      pressureDisplay: 'N/A',
+      visibilityDisplay: 'N/A',
+      capeDisplay: 'N/A'
+    });
+
+    const alerts = (alertsResp && alertsResp.features) || [];
+    spUpdateAlertTicker(alerts);
+
+    console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' + alerts.length + ' active alert(s).');
+  } catch (err) {
+    console.warn('StormPath NWS weather fetch failed — entering SAFE MODE. Reason: ' + err.message);
+    spSetState('safe');
+  }
+}
 </script>
 
 </body>
