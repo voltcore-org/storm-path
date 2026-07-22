@@ -2325,7 +2325,7 @@ body {
      SHARED BOTTOM BAR
      ════════════════════════════════════════════════ -->
 <div class="bottombar">
-  <div class="status-item"><div class="status-item-dot"></div> GPS PROTOTYPE · SIMULATED</div>
+  <div class="status-item"><div class="status-item-dot" id="gps-status-dot"></div> <span id="gps-status-label">GPS ACQUIRING…</span></div>
   <div class="status-item"><div class="status-item-dot" style="background:var(--amber)"></div> 3 SIMULATED ALERTS</div>
   <div class="ticker-wrap">
     <div class="ticker">
@@ -2338,7 +2338,7 @@ body {
     </div>
   </div>
   <div id="coords" style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim)">
-    37.7749° N, 122.4194° W
+    ACQUIRING GPS FIX…
   </div>
 </div>
 
@@ -2582,7 +2582,11 @@ function drawMap() {
   mCtx.strokeStyle='rgba(255,220,100,0.5)'; mCtx.lineWidth=3*Z; mCtx.stroke();
   mCtx.setLineDash([]);
 
-  const posX=cx-120*Z, posY=cy+80*Z;
+  let posX=cx-120*Z, posY=cy+80*Z;
+  if (spGPSAvailable && spCoords.lat !== null && spCoords.lon !== null) {
+    const off = spGeoToCanvasOffset(spCoords.lat, spCoords.lon, Z);
+    posX += off.dx; posY += off.dy;
+  }
   mCtx.beginPath(); mCtx.arc(posX,posY,28*Z,0,Math.PI*2);
   mCtx.fillStyle='rgba(0,229,255,0.06)'; mCtx.fill();
   mCtx.beginPath(); mCtx.moveTo(posX,posY);
@@ -3522,6 +3526,107 @@ function runStartupSafetyChecks() {
 
   // DRIVER is active at startup. MAP and WEATHER loops remain lazy-loaded.
 })();
+
+// ────────────────────────────────────────────────
+//  REAL DEVICE GPS — replaces hardcoded 37.7749°N, 122.4194°W
+//  Initial fix via getCurrentPosition(), then continuous updates
+//  via watchPosition(). Any permission denial / unavailable GPS
+//  routes into the SAFE MODE pattern instead of crashing or
+//  silently keeping the fake coordinates.
+// ────────────────────────────────────────────────
+let spCoords = { lat: null, lon: null, accuracy: null };
+let spGPSAvailable = false;
+let spGPSWatchId = null;
+
+// Anchor point for projecting real GPS deltas onto the illustrative
+// (non-geo-referenced) map canvas. Matches the prototype's original
+// hardcoded location so the fixed street layout stays a sensible fit.
+const SP_MAP_ANCHOR = { lat: 37.7749, lon: -122.4194 };
+const SP_METERS_PER_PIXEL = 8; // approximate scale of the illustrative map at zoom 1.0
+
+function spGeoToCanvasOffset(lat, lon, zoom) {
+  const metersPerDegLat = 111320;
+  const metersPerDegLon = 111320 * Math.cos(SP_MAP_ANCHOR.lat * Math.PI / 180);
+  const dxMeters = (lon - SP_MAP_ANCHOR.lon) * metersPerDegLon;
+  const dyMeters = (lat - SP_MAP_ANCHOR.lat) * metersPerDegLat;
+  const scale = zoom / SP_METERS_PER_PIXEL;
+  let dx = dxMeters * scale, dy = -dyMeters * scale; // canvas y grows downward
+
+  // The illustrative street layout only covers a small fixed area, so a real
+  // fix far from the anchor is clamped to stay on the visible map rather than
+  // flying off it — direction from the anchor is preserved, distance is not.
+  const maxRadius = 140 * zoom;
+  const mag = Math.hypot(dx, dy);
+  if (mag > maxRadius) {
+    const k = maxRadius / mag;
+    dx *= k; dy *= k;
+  }
+  return { dx, dy };
+}
+
+function spSetGPSStatus(label, color) {
+  const dot = document.getElementById('gps-status-dot');
+  const lbl = document.getElementById('gps-status-label');
+  if (dot) { dot.style.background = color; dot.style.boxShadow = '0 0 8px ' + color; }
+  if (lbl) lbl.textContent = label;
+}
+
+function spUpdateCoordsDisplay() {
+  const el = document.getElementById('coords');
+  if (!el) return;
+  if (spGPSAvailable && spCoords.lat !== null && spCoords.lon !== null) {
+    const latDir = spCoords.lat >= 0 ? 'N' : 'S';
+    const lonDir = spCoords.lon >= 0 ? 'E' : 'W';
+    el.textContent = Math.abs(spCoords.lat).toFixed(4) + '° ' + latDir + ', ' +
+                      Math.abs(spCoords.lon).toFixed(4) + '° ' + lonDir;
+  } else {
+    el.textContent = 'GPS UNAVAILABLE';
+  }
+}
+
+function spOnPositionSuccess(pos) {
+  spCoords.lat = pos.coords.latitude;
+  spCoords.lon = pos.coords.longitude;
+  spCoords.accuracy = pos.coords.accuracy;
+  spGPSAvailable = true;
+  spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
+  spUpdateCoordsDisplay();
+  if (activeScreen === 'map') drawMap();
+}
+
+// Any GPS failure (permission denied, position unavailable, timeout) is
+// routed into SAFE MODE via the same spSetState() path the DEV panel and
+// startup safety checks use — never a silent fallback to fake coordinates.
+function spOnPositionError(err) {
+  spGPSAvailable = false;
+  let reason;
+  switch (err.code) {
+    case err.PERMISSION_DENIED:    reason = 'GPS permission denied'; break;
+    case err.POSITION_UNAVAILABLE: reason = 'GPS position unavailable'; break;
+    case err.TIMEOUT:              reason = 'GPS fix timed out'; break;
+    default:                       reason = 'GPS error: ' + err.message;
+  }
+  console.warn('StormPath GPS failure — entering SAFE MODE. Reason: ' + reason);
+  spSetGPSStatus('GPS ' + (err.code === err.PERMISSION_DENIED ? 'DENIED' : 'UNAVAILABLE'), 'var(--red-alert)');
+  spUpdateCoordsDisplay();
+  spSetState('safe');
+  if (activeScreen === 'map') drawMap();
+}
+
+function spInitGeolocation() {
+  if (!navigator.geolocation) {
+    console.warn('StormPath GPS failure — entering SAFE MODE. Reason: Geolocation API unavailable in this browser.');
+    spSetGPSStatus('GPS UNAVAILABLE', 'var(--red-alert)');
+    spUpdateCoordsDisplay();
+    spSetState('safe');
+    return;
+  }
+  const gpsOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+  navigator.geolocation.getCurrentPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
+  spGPSWatchId = navigator.geolocation.watchPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
+}
+
+spInitGeolocation();
 </script>
 
 </body>
