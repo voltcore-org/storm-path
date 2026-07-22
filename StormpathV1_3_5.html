@@ -2416,7 +2416,10 @@ body {
 
   <div class="sp-dev-title" style="margin-top:8px;">RADAR WMS DEBUG</div>
   <div id="sp-dev-radar-status">NO REQUEST YET</div>
-  <textarea id="sp-dev-radar-url" readonly rows="4" onclick="this.select()">(no request yet)</textarea>
+  <div style="display:flex;gap:6px;align-items:stretch;">
+    <textarea id="sp-dev-radar-url" readonly rows="4" onclick="this.select()" style="flex:1;">(no request yet)</textarea>
+    <button id="sp-dev-radar-copy" onclick="spCopyRadarUrl()" style="white-space:nowrap;align-self:flex-start;">📋 COPY</button>
+  </div>
 </div>
 
 <script>
@@ -2740,6 +2743,46 @@ function spSetRadarDebugPanel(status, url) {
   const urlEl = document.getElementById('sp-dev-radar-url');
   if (statusEl && status !== undefined) statusEl.textContent = status;
   if (urlEl && url !== undefined) urlEl.value = url;
+}
+
+// One-tap copy for the debug URL box — manual select-and-copy of a long
+// wrapped URL is error-prone on mobile. Tries the async Clipboard API first
+// (requires a secure context) and falls back to the legacy select() +
+// execCommand('copy') path so this still works over plain HTTP or in older
+// WebViews. Button label gives feedback either way; never throws up to the
+// caller since a failed copy is a UX nuisance, not an app-level failure.
+function spCopyRadarUrl() {
+  const urlEl = document.getElementById('sp-dev-radar-url');
+  const btn = document.getElementById('sp-dev-radar-copy');
+  if (!urlEl) return;
+  const text = urlEl.value;
+
+  const showResult = (ok) => {
+    if (!btn) return;
+    const original = '📋 COPY URL';
+    btn.textContent = ok ? '✓ COPIED' : '✗ COPY FAILED';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  };
+
+  const legacyCopy = () => {
+    try {
+      urlEl.select();
+      urlEl.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy');
+      showResult(ok);
+    } catch (e) {
+      showResult(false);
+    }
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => showResult(true),
+      () => legacyCopy()
+    );
+  } else {
+    legacyCopy();
+  }
 }
 
 // Fetches the real radar mosaic centered on (lat, lon). Any failure is
