@@ -419,15 +419,18 @@
     z-index: 0;
   }
 
-  #radarCanvas {
+  #radarImg {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     z-index: 2;
     opacity: 0.82;
     transition: opacity 0.4s;
   }
 
-  #radarCanvas.hidden { opacity: 0; pointer-events: none; }
+  #radarImg.hidden { opacity: 0; pointer-events: none; }
 
   .hud-compass {
     position: absolute;
@@ -722,22 +725,50 @@
     position: relative;
   }
 
-  /* ── PATCH: miniRadar stays in MAP right-panel. miniRadarWx is in WEATHER screen. ── */
+  .scope-circle {
+    position: relative;
+    display: inline-block;
+  }
+
+  /* ── miniRadar stays in MAP right-panel. miniRadarWx is in WEATHER screen. ── */
+  /* Both are now real NWS radar imagery <img> elements, not canvases. */
   #miniRadar {
     display: block;
+    object-fit: cover;
     border: 1px solid var(--border);
     border-radius: 50%;
     background: var(--bg-deep);
     box-shadow: 0 0 20px rgba(0,229,255,0.08), inset 0 0 30px rgba(0,0,0,0.5);
+    transition: opacity 0.4s;
   }
 
   #miniRadarWx {
     display: block;
+    object-fit: cover;
     border: 1px solid var(--border);
     border-radius: 50%;
     background: var(--bg-deep);
     box-shadow: 0 0 20px rgba(0,229,255,0.08), inset 0 0 30px rgba(0,0,0,0.5);
+    transition: opacity 0.4s;
   }
+
+  #miniRadar.hidden, #miniRadarWx.hidden { opacity: 0; }
+
+  .scope-compass {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    color: rgba(0,229,255,0.55);
+    text-shadow: 0 0 4px rgba(0,0,0,0.9);
+  }
+
+  .scope-compass span { position: absolute; }
+  .scope-compass .n { top: 4px; left: 50%; transform: translateX(-50%); }
+  .scope-compass .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+  .scope-compass .e { right: 4px; top: 50%; transform: translateY(-50%); }
+  .scope-compass .w { left: 4px; top: 50%; transform: translateY(-50%); }
 
   .scope-label {
     font-family: 'Courier New', 'Lucida Console', monospace;
@@ -2029,7 +2060,7 @@ body {
       </div>
 
       <div class="panel-section">
-        <div class="section-label">SIMULATED dBZ SCALE</div>
+        <div class="section-label">dBZ SCALE (NWS BASE REFLECTIVITY)</div>
         <div class="radar-legend">
           <div class="legend-bar"></div>
           <div class="legend-labels">
@@ -2054,7 +2085,7 @@ body {
     <!-- MAP CANVAS -->
     <div class="map-wrap" id="mapWrap">
       <canvas id="mapCanvas"></canvas>
-      <canvas id="radarCanvas"></canvas>
+      <img id="radarImg" class="hidden" alt="" />
       <div class="scanlines"></div>
       <div class="vignette"></div>
 
@@ -2095,7 +2126,7 @@ body {
         <div class="speed-limit" id="speed-limit">45</div>
       </div>
 
-      <div class="hud-radar-time" id="radar-time">RADAR · SIMULATED · LOOP: 1/6</div>
+      <div class="hud-radar-time" id="radar-time">RADAR · AWAITING GPS FIX</div>
 
       <div class="reroute-popup" id="reroute-popup">
         <div class="reroute-title">⚡ WEATHER REROUTE AVAILABLE</div>
@@ -2112,13 +2143,21 @@ body {
       <div class="panel-section">
         <div class="section-label">RADAR SCOPE</div>
         <div class="mini-scope">
-          <canvas id="miniRadar" width="190" height="190"></canvas>
-          <div class="scope-label">SIMULATED BASE REFLECTIVITY</div>
+          <div class="scope-circle">
+            <img id="miniRadar" width="190" height="190" class="hidden" alt="" />
+            <div class="scope-compass">
+              <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
+            </div>
+          </div>
+          <div class="scope-label">NWS BASE REFLECTIVITY — LIVE</div>
         </div>
       </div>
 
       <div class="panel-section" style="flex:1;">
-        <div class="section-label">TRACKED STORM CELLS</div>
+        <div class="section-label">TRACKED STORM CELLS (SIMULATED)</div>
+        <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--text-secondary);border:1px dashed var(--grid-line);padding:6px 8px;margin-bottom:10px;line-height:1.5;">
+          ⚠ ILLUSTRATIVE DEMO DATA ONLY — not real storm-cell tracking. Separate from the live NWS radar imagery above.
+        </div>
         <div class="storm-cell danger" id="cell-A">
           <div class="cell-header">
             <span class="cell-id">CELL-A7</span>
@@ -2218,14 +2257,18 @@ body {
         <div class="wx-title">RADAR SCOPE</div>
         <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
           <div>
-            <!-- PATCH: separate miniRadarWx canvas — never null-referenced while MAP screen hidden -->
-            <canvas id="miniRadarWx" width="220" height="220"
-              style="display:block;border:1px solid var(--border);border-radius:50%;background:var(--bg-deep);box-shadow:0 0 20px rgba(0,229,255,0.08);">
-            </canvas>
-            <div class="scope-label" style="margin-top:8px;">SIMULATED BASE REFLECTIVITY</div>
+            <!-- Real NWS radar imagery: never null-referenced while MAP screen hidden -->
+            <div class="scope-circle">
+              <img id="miniRadarWx" width="220" height="220" class="hidden" alt=""
+                style="display:block;border:1px solid var(--border);border-radius:50%;background:var(--bg-deep);box-shadow:0 0 20px rgba(0,229,255,0.08);object-fit:cover;">
+              <div class="scope-compass">
+                <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
+              </div>
+            </div>
+            <div class="scope-label" style="margin-top:8px;">NWS BASE REFLECTIVITY — LIVE</div>
           </div>
           <div style="flex:1;min-width:180px;">
-            <div class="wx-title">dBZ SCALE</div>
+            <div class="wx-title">dBZ SCALE (NWS BASE REFLECTIVITY)</div>
             <div class="radar-legend">
               <div class="legend-bar"></div>
               <div class="legend-labels">
@@ -2233,7 +2276,10 @@ body {
               </div>
             </div>
             <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
-              <div class="wx-title">TRACKED CELLS</div>
+              <div class="wx-title">TRACKED CELLS (SIMULATED)</div>
+              <div style="font-family:'Courier New',monospace;font-size:0.62rem;color:var(--text-secondary);border:1px dashed var(--grid-line);padding:5px 7px;line-height:1.5;">
+                ⚠ ILLUSTRATIVE DEMO DATA ONLY — not real storm-cell tracking. Separate from the live radar scope above.
+              </div>
               <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--red-alert);">● CELL-A7 · SUPERCELL · NE 28mph · dBZ 68</div>
               <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--amber);">● CELL-B3 · MODERATE · N 18mph · dBZ 52</div>
               <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--cyan);">● CELL-C1 · LIGHT · SE 12mph · dBZ 32</div>
@@ -2430,16 +2476,10 @@ function switchScreen(name) {
       resizeCanvases();
       requestAnimationFrame(() => {
         drawMap();
-        drawRadar(performance.now());
-        drawMiniRadar(performance.now());
         startLoop();
       });
     } else if (name === 'weather') {
       syncWeatherPanel();
-      requestAnimationFrame(() => {
-        drawMiniRadarWx(performance.now());
-        startLoopWx();
-      });
     }
     // DRIVER screen: no canvas drawing needed
   });
@@ -2456,22 +2496,6 @@ function getMapCtx() {
   if (!c) return null;
   return c.getContext('2d');
 }
-function getRadarCtx() {
-  const c = document.getElementById('radarCanvas');
-  if (!c) return null;
-  return c.getContext('2d');
-}
-function getMiniCtx() {
-  const c = document.getElementById('miniRadar');
-  if (!c) return null;
-  return c.getContext('2d');
-}
-function getMiniWxCtx() {
-  const c = document.getElementById('miniRadarWx');
-  if (!c) return null;
-  return c.getContext('2d');
-}
-
 // PATCH: resizeCanvases — guards added; only runs when MAP screen active
 function resizeCanvases() {
   const wrap = document.getElementById('mapWrap');
@@ -2481,9 +2505,8 @@ function resizeCanvases() {
   if (!W || !H) return; // Guard: hidden screen has 0 dimensions
 
   const mc = document.getElementById('mapCanvas');
-  const rc = document.getElementById('radarCanvas');
   if (mc) { mc.width = W; mc.height = H; }
-  if (rc) { rc.width = W; rc.height = H; }
+  // radarImg is a plain <img> sized via CSS (object-fit: cover) — no pixel buffer to resize.
 }
 
 // PATCH: resize only triggers map resize when map screen is active
@@ -2491,8 +2514,6 @@ window.addEventListener('resize', () => {
   if (activeScreen === 'map') {
     resizeCanvases();
     drawMap();
-    drawRadar(performance.now());
-    drawMiniRadar(performance.now());
   }
 });
 
@@ -2620,252 +2641,100 @@ function drawMap() {
 }
 
 // ────────────────────────────────────────────────
-//  RADAR CANVAS — NEXRAD Simulation
+//  REAL RADAR IMAGERY — NWS public OGC WMS radar mosaic
+//  Replaces the old canvas-drawn simulated noise blobs and three
+//  hardcoded storm cells (CELL-A7/B3/C1 in the "TRACKED STORM CELLS"
+//  panel are a separate, explicitly-labeled illustrative feature —
+//  see the panel markup — since real storm-cell tracking requires
+//  tracking algorithms out of scope here).
+//  Source: opengeo.ncep.noaa.gov GeoServer WMS, layer conus_bref_qcd
+//  (CONUS base reflectivity, quality-controlled) — the same public
+//  service radar.weather.gov itself renders from.
+//  Displayed via plain <img> elements, not canvas: we only ever show
+//  the image, never read its pixels, so no CORS/tainted-canvas handling
+//  is needed.
+//  Any failure (network error, non-2xx, image decode failure) is routed
+//  into SAFE MODE via spSetState('safe') — the same pathway GPS and NWS
+//  weather failures use. There is no fallback to simulated imagery.
 // ────────────────────────────────────────────────
-const stormCells = [
-  {x:80, y:-80, r:90, intensity:0.9, vx:0.8, vy:-0.4, label:'A7'},
-  {x:-140,y:60, r:60, intensity:0.55,vx:0.3, vy:-0.6, label:'B3'},
-  {x:160, y:130,r:45, intensity:0.28,vx:0.5, vy:0.5,  label:'C1'},
-];
+const SP_RADAR_WMS_BASE = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
+const SP_RADAR_SPAN_DEG = 2.5; // ~170mi square view centered on the driver's real GPS fix
+const SP_RADAR_IMG_PX = 512;
+const SP_RADAR_REFRESH_MS = 5 * 60 * 1000; // NWS composite mosaic refreshes every ~5-10 min
 
-let stormTime = 0;
+let spRadarFetchInFlight = false;
+let spRadarRefreshTimer = null;
 
-function dBZColor(norm) {
-  const stops=[
-    [0.0,[0,0,0,0]],[0.12,[0,50,220,100]],[0.25,[0,180,255,130]],
-    [0.38,[0,255,80,140]],[0.50,[160,255,0,150]],[0.62,[255,200,0,160]],
-    [0.72,[255,100,0,175]],[0.82,[255,0,0,185]],[0.92,[180,0,220,200]],[1.00,[255,255,255,220]],
-  ];
-  for(let i=0;i<stops.length-1;i++){
-    if(norm>=stops[i][0]&&norm<=stops[i+1][0]){
-      const t=(norm-stops[i][0])/(stops[i+1][0]-stops[i][0]);
-      const c0=stops[i][1],c1=stops[i+1][1];
-      return [Math.round(c0[0]+(c1[0]-c0[0])*t),Math.round(c0[1]+(c1[1]-c0[1])*t),
-              Math.round(c0[2]+(c1[2]-c0[2])*t),Math.round(c0[3]+(c1[3]-c0[3])*t)];
-    }
-  }
-  return [0,0,0,0];
+function spBuildRadarUrl(lat, lon) {
+  const half = SP_RADAR_SPAN_DEG / 2;
+  const minLon = lon - half, maxLon = lon + half;
+  const minLat = lat - half, maxLat = lat + half;
+  const params = new URLSearchParams({
+    service: 'WMS', version: '1.1.1', request: 'GetMap',
+    layers: 'conus_bref_qcd', styles: '', format: 'image/png',
+    transparent: 'true', srs: 'EPSG:4326',
+    bbox: [minLon, minLat, maxLon, maxLat].join(','),
+    width: String(SP_RADAR_IMG_PX), height: String(SP_RADAR_IMG_PX)
+  });
+  return SP_RADAR_WMS_BASE + '?' + params.toString();
 }
 
-// PATCH: drawRadar — null guard on ctx, W/H guard, IndexSizeError guard on createImageData
-function drawRadar(timestamp) {
-  const rCanvas = document.getElementById('radarCanvas');
-  if (!rCanvas) return;
-  const rCtx = getRadarCtx();
-  if (!rCtx) return;
-
-  const W = rCanvas.width, H = rCanvas.height;
-  if (!W || !H) return; // Guard: zero-sized canvas
-
-  const cx=W/2, cy=H/2;
-  rCtx.clearRect(0,0,W,H);
-  stormTime = timestamp/1000;
-  const Z = zoomLevel;
-
-  stormCells.forEach(cell=>{
-    const px=cx+(cell.x+cell.vx*stormTime*3)*Z;
-    const py=cy+(cell.y+cell.vy*stormTime*3)*Z;
-    const R=cell.r*Z;
-    const x0=Math.max(0,Math.floor(px-R-5));
-    const y0=Math.max(0,Math.floor(py-R-5));
-    const x1=Math.min(W,Math.ceil(px+R+5));
-    const y1=Math.min(H,Math.ceil(py+R+5));
-    const iw=x1-x0, ih=y1-y0;
-    if(iw<=0||ih<=0) return; // Guard: zero-area ImageData would throw IndexSizeError
-
-    const imgData=rCtx.createImageData(iw,ih);
-    const d=imgData.data;
-
-    for(let py2=y0;py2<y1;py2++){
-      for(let px2=x0;px2<x1;px2++){
-        const dx=(px2-px)/R, dy=(py2-py)/R;
-        const dist=Math.sqrt(dx*dx+dy*dy);
-        if(dist>1.1) continue;
-        const noise=0.15*(Math.sin(dx*8+stormTime*0.8)*Math.cos(dy*6-stormTime*0.5)+Math.sin((dx+dy)*12-stormTime)*0.5);
-        const falloff=Math.max(0,1-dist*0.95);
-        const norm=Math.min(1,falloff*cell.intensity+noise*falloff);
-        const [r,g,b,a]=dBZColor(norm);
-        const idx=((py2-y0)*iw+(px2-x0))*4;
-        d[idx]=r; d[idx+1]=g; d[idx+2]=b; d[idx+3]=a;
-      }
-    }
-    rCtx.putImageData(imgData,x0,y0);
-
-    rCtx.beginPath(); rCtx.arc(px,py,R*0.9,0,Math.PI*2);
-    rCtx.strokeStyle=cell.intensity>0.7?`rgba(255,50,50,${0.3+0.2*Math.sin(stormTime*2)})`:'rgba(255,200,0,0.2)';
-    rCtx.lineWidth=2; rCtx.stroke();
-
-    const vlen=40*Z;
-    const vx=cell.vx/Math.sqrt(cell.vx*cell.vx+cell.vy*cell.vy);
-    const vy=cell.vy/Math.sqrt(cell.vx*cell.vx+cell.vy*cell.vy);
-    rCtx.beginPath(); rCtx.moveTo(px,py); rCtx.lineTo(px+vx*vlen,py+vy*vlen);
-    rCtx.strokeStyle='rgba(255,255,255,0.6)'; rCtx.lineWidth=1.5; rCtx.stroke();
-    const angle=Math.atan2(vy,vx);
-    rCtx.beginPath(); rCtx.moveTo(px+vx*vlen,py+vy*vlen);
-    rCtx.lineTo(px+vx*vlen-8*Math.cos(angle-0.4),py+vy*vlen-8*Math.sin(angle-0.4));
-    rCtx.lineTo(px+vx*vlen-8*Math.cos(angle+0.4),py+vy*vlen-8*Math.sin(angle+0.4));
-    rCtx.closePath(); rCtx.fillStyle='rgba(255,255,255,0.7)'; rCtx.fill();
-
-    rCtx.font=`bold ${11*Z}px 'Courier New',monospace`; rCtx.fillStyle='rgba(255,255,255,0.9)';
-    rCtx.textAlign='center'; rCtx.shadowColor='rgba(0,0,0,0.8)'; rCtx.shadowBlur=4;
-    rCtx.fillText(`C-${cell.label}`,px,py+R+14*Z); rCtx.shadowBlur=0;
-  });
-
-  const bgData=rCtx.createImageData(W,H);
-  const bg=bgData.data;
-  const t=stormTime;
-  for(let y=0;y<H;y+=3){
-    for(let x=0;x<W;x+=3){
-      const nx=x/W*4,ny=y/H*4;
-      const v=0.5*(Math.sin(nx*3+t*0.2)*Math.cos(ny*2)+Math.sin((nx+ny)*2-t*0.15));
-      if(v<-0.2){
-        const norm=(-v-0.2)*0.3;
-        const [r,g,b,a]=dBZColor(norm);
-        for(let dy=0;dy<3;dy++) for(let dx=0;dx<3;dx++){
-          const idx=((y+dy)*W+(x+dx))*4;
-          if(bg[idx+3]===0){bg[idx]=r;bg[idx+1]=g;bg[idx+2]=b;bg[idx+3]=a*0.5;}
-        }
-      }
-    }
-  }
-  rCtx.putImageData(bgData,0,0);
-
-  const sweepAngle=(stormTime*1.5)%(Math.PI*2);
-  const sweepR=Math.max(W,H);
-  rCtx.save(); rCtx.translate(cx,cy);
-  const fanGrad=rCtx.createLinearGradient(0,0,Math.cos(sweepAngle)*sweepR,Math.sin(sweepAngle)*sweepR);
-  fanGrad.addColorStop(0,'rgba(0,229,255,0.0)');
-  fanGrad.addColorStop(0.7,'rgba(0,229,255,0.04)');
-  fanGrad.addColorStop(1,'rgba(0,229,255,0.01)');
-  rCtx.beginPath(); rCtx.moveTo(0,0); rCtx.arc(0,0,sweepR,sweepAngle-0.4,sweepAngle,false); rCtx.closePath();
-  rCtx.fillStyle=fanGrad; rCtx.fill();
-  rCtx.beginPath(); rCtx.moveTo(0,0); rCtx.lineTo(Math.cos(sweepAngle)*sweepR,Math.sin(sweepAngle)*sweepR);
-  rCtx.strokeStyle='rgba(0,229,255,0.35)'; rCtx.lineWidth=1.5; rCtx.stroke();
-  rCtx.restore();
-
-  const radarTimeEl = document.getElementById('radar-time');
-  if (radarTimeEl) {
-    const frameNum=Math.floor(stormTime*2)%6+1;
-    radarTimeEl.textContent=`RADAR · SIM · LOOP: ${frameNum}/6`;
-  }
+function spSetRadarStatus(text) {
+  const el = document.getElementById('radar-time');
+  if (el) el.textContent = text;
 }
 
-// ────────────────────────────────────────────────
-//  MINI RADAR SCOPE — MAP screen right panel
-// ────────────────────────────────────────────────
-// PATCH: drawMiniRadar — null guard on ctx and canvas, W/H guard
-function drawMiniRadar(timestamp) {
-  const miniCanvas = document.getElementById('miniRadar');
-  if (!miniCanvas) return;
-  const mrc = getMiniCtx();
-  if (!mrc) return;
-
-  const W = miniCanvas.width, H = miniCanvas.height;
-  if (!W || !H) return; // Guard: zero-sized canvas
-
-  const cx=W/2, cy=H/2, R=Math.min(cx,cy)-2;
-  mrc.clearRect(0,0,W,H);
-  mrc.save();
-  mrc.beginPath(); mrc.arc(cx,cy,R,0,Math.PI*2); mrc.clip();
-  mrc.fillStyle='#020810'; mrc.fill();
-
-  [0.25,0.5,0.75,1].forEach(f=>{
-    mrc.beginPath(); mrc.arc(cx,cy,R*f,0,Math.PI*2);
-    mrc.strokeStyle='rgba(0,229,255,0.12)'; mrc.lineWidth=1; mrc.stroke();
+function spApplyRadarImage(url) {
+  ['radarImg', 'miniRadar', 'miniRadarWx'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.src = url;
+    el.classList.remove('hidden');
   });
-  mrc.beginPath(); mrc.moveTo(cx-R,cy); mrc.lineTo(cx+R,cy);
-  mrc.moveTo(cx,cy-R); mrc.lineTo(cx,cy+R);
-  mrc.strokeStyle='rgba(0,229,255,0.12)'; mrc.lineWidth=1; mrc.stroke();
-
-  const t=timestamp/1000;
-  stormCells.forEach(cell=>{
-    const scale=R/250;
-    const px=cx+(cell.x+cell.vx*t*3)*scale;
-    const py=cy+(cell.y+cell.vy*t*3)*scale;
-    const cr=cell.r*scale;
-    const grad=mrc.createRadialGradient(px,py,0,px,py,cr);
-    const col=cell.intensity>0.7?['rgba(255,0,0,0.8)','rgba(255,100,0,0.4)','rgba(255,200,0,0.1)']:
-              cell.intensity>0.4?['rgba(255,200,0,0.7)','rgba(0,255,100,0.3)','rgba(0,200,255,0.05)']:
-              ['rgba(0,200,255,0.5)','rgba(0,100,255,0.2)','transparent'];
-    grad.addColorStop(0,col[0]); grad.addColorStop(0.5,col[1]); grad.addColorStop(1,col[2]);
-    mrc.beginPath(); mrc.arc(px,py,cr,0,Math.PI*2); mrc.fillStyle=grad; mrc.fill();
-  });
-
-  mrc.beginPath(); mrc.arc(cx-25,cy+25,4,0,Math.PI*2);
-  mrc.fillStyle='#00e5ff'; mrc.shadowColor='#00e5ff'; mrc.shadowBlur=8; mrc.fill(); mrc.shadowBlur=0;
-
-  const sweepAngle=(t*1.5)%(Math.PI*2);
-  mrc.beginPath(); mrc.moveTo(cx,cy); mrc.arc(cx,cy,R,sweepAngle-0.4,sweepAngle,false); mrc.closePath();
-  mrc.fillStyle='rgba(0,229,255,0.07)'; mrc.fill();
-  mrc.beginPath(); mrc.moveTo(cx,cy); mrc.lineTo(cx+Math.cos(sweepAngle)*R,cy+Math.sin(sweepAngle)*R);
-  mrc.strokeStyle='rgba(0,229,255,0.5)'; mrc.lineWidth=1.5; mrc.stroke();
-  mrc.restore();
-
-  mrc.beginPath(); mrc.arc(cx,cy,R,0,Math.PI*2);
-  mrc.strokeStyle='rgba(0,229,255,0.3)'; mrc.lineWidth=2; mrc.stroke();
-
-  mrc.font='9px Courier New,monospace'; mrc.textAlign='center'; mrc.fillStyle='rgba(0,229,255,0.5)';
-  mrc.fillText('N',cx,cy-R+12); mrc.fillText('S',cx,cy+R-4);
-  mrc.fillText('E',cx+R-6,cy+4); mrc.fillText('W',cx-R+6,cy+4);
 }
 
-// ────────────────────────────────────────────────
-//  MINI RADAR WX — WEATHER screen
-//  PATCH: separate canvas; only drawn when WEATHER screen is active
-// ────────────────────────────────────────────────
-function drawMiniRadarWx(timestamp) {
-  const miniCanvasWx = document.getElementById('miniRadarWx');
-  if (!miniCanvasWx) return; // Guard: canvas element missing
-  const mrcWx = getMiniWxCtx();
-  if (!mrcWx) return;
-
-  const W = miniCanvasWx.width, H = miniCanvasWx.height;
-  if (!W || !H) return; // Guard: zero-sized canvas
-
-  const cx=W/2, cy=H/2, R=Math.min(cx,cy)-2;
-  mrcWx.clearRect(0,0,W,H);
-  mrcWx.save();
-  mrcWx.beginPath(); mrcWx.arc(cx,cy,R,0,Math.PI*2); mrcWx.clip();
-  mrcWx.fillStyle='#020810'; mrcWx.fill();
-
-  [0.25,0.5,0.75,1].forEach(f=>{
-    mrcWx.beginPath(); mrcWx.arc(cx,cy,R*f,0,Math.PI*2);
-    mrcWx.strokeStyle='rgba(0,229,255,0.12)'; mrcWx.lineWidth=1; mrcWx.stroke();
+function spHideRadarImages() {
+  ['radarImg', 'miniRadar', 'miniRadarWx'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
   });
-  mrcWx.beginPath(); mrcWx.moveTo(cx-R,cy); mrcWx.lineTo(cx+R,cy);
-  mrcWx.moveTo(cx,cy-R); mrcWx.lineTo(cx,cy+R);
-  mrcWx.strokeStyle='rgba(0,229,255,0.12)'; mrcWx.lineWidth=1; mrcWx.stroke();
+}
 
-  const t=timestamp/1000;
-  stormCells.forEach(cell=>{
-    const scale=R/250;
-    const px=cx+(cell.x+cell.vx*t*3)*scale;
-    const py=cy+(cell.y+cell.vy*t*3)*scale;
-    const cr=cell.r*scale;
-    const grad=mrcWx.createRadialGradient(px,py,0,px,py,cr);
-    const col=cell.intensity>0.7?['rgba(255,0,0,0.8)','rgba(255,100,0,0.4)','rgba(255,200,0,0.1)']:
-              cell.intensity>0.4?['rgba(255,200,0,0.7)','rgba(0,255,100,0.3)','rgba(0,200,255,0.05)']:
-              ['rgba(0,200,255,0.5)','rgba(0,100,255,0.2)','transparent'];
-    grad.addColorStop(0,col[0]); grad.addColorStop(0.5,col[1]); grad.addColorStop(1,col[2]);
-    mrcWx.beginPath(); mrcWx.arc(px,py,cr,0,Math.PI*2); mrcWx.fillStyle=grad; mrcWx.fill();
-  });
+// Fetches the real radar mosaic centered on (lat, lon). Any failure is
+// routed into SAFE MODE — never a silent fallback to fake blobs.
+function spFetchRadarImage(lat, lon) {
+  if (spRadarFetchInFlight) return;
+  spRadarFetchInFlight = true;
+  spSetRadarStatus('RADAR · LOADING…');
 
-  mrcWx.beginPath(); mrcWx.arc(cx-30,cy+30,5,0,Math.PI*2);
-  mrcWx.fillStyle='#00e5ff'; mrcWx.shadowColor='#00e5ff'; mrcWx.shadowBlur=8; mrcWx.fill(); mrcWx.shadowBlur=0;
+  const url = spBuildRadarUrl(lat, lon);
+  const probe = new Image();
+  probe.onload = () => {
+    spRadarFetchInFlight = false;
+    spApplyRadarImage(url);
+    const now = new Date();
+    spSetRadarStatus('RADAR · LIVE · ' + now.toLocaleTimeString('en-US', { hour12: false }));
+  };
+  probe.onerror = () => {
+    spRadarFetchInFlight = false;
+    console.warn('StormPath radar imagery failed to load from opengeo.ncep.noaa.gov WMS — entering SAFE MODE.');
+    spHideRadarImages();
+    spSetRadarStatus('RADAR · UNAVAILABLE');
+    spSetState('safe');
+  };
+  probe.src = url;
+}
 
-  const sweepAngle=(t*1.5)%(Math.PI*2);
-  mrcWx.beginPath(); mrcWx.moveTo(cx,cy); mrcWx.arc(cx,cy,R,sweepAngle-0.4,sweepAngle,false); mrcWx.closePath();
-  mrcWx.fillStyle='rgba(0,229,255,0.07)'; mrcWx.fill();
-  mrcWx.beginPath(); mrcWx.moveTo(cx,cy); mrcWx.lineTo(cx+Math.cos(sweepAngle)*R,cy+Math.sin(sweepAngle)*R);
-  mrcWx.strokeStyle='rgba(0,229,255,0.5)'; mrcWx.lineWidth=1.5; mrcWx.stroke();
-  mrcWx.restore();
-
-  mrcWx.beginPath(); mrcWx.arc(cx,cy,R,0,Math.PI*2);
-  mrcWx.strokeStyle='rgba(0,229,255,0.3)'; mrcWx.lineWidth=2; mrcWx.stroke();
-
-  mrcWx.font='10px Courier New,monospace'; mrcWx.textAlign='center'; mrcWx.fillStyle='rgba(0,229,255,0.5)';
-  mrcWx.fillText('N',cx,cy-R+13); mrcWx.fillText('S',cx,cy+R-4);
-  mrcWx.fillText('E',cx+R-6,cy+5); mrcWx.fillText('W',cx-R+6,cy+5);
+// Keeps the radar mosaic current while a GPS fix exists — the NWS
+// composite itself only refreshes every ~5-10 minutes, so polling faster
+// would just re-request the same frame.
+function spStartRadarRefresh() {
+  if (spRadarRefreshTimer !== null) return;
+  spRadarRefreshTimer = setInterval(() => {
+    if (spGPSAvailable && spCoords.lat !== null && spCoords.lon !== null) {
+      spFetchRadarImage(spCoords.lat, spCoords.lon);
+    }
+  }, SP_RADAR_REFRESH_MS);
 }
 
 // ────────────────────────────────────────────────
@@ -2898,8 +2767,6 @@ function startLoop() {
     if (activeScreen !== 'map') { animFrame = null; return; }
     try {
       drawMap();
-      drawRadar(timestamp);
-      drawMiniRadar(timestamp);
       updateSpeed(timestamp);
     } catch (error) {
       // PATCH: replaced empty catch — surface the true error
@@ -2908,21 +2775,6 @@ function startLoop() {
     animFrame = requestAnimationFrame(loop);
   }
   animFrame = requestAnimationFrame(loop);
-}
-
-function startLoopWx() {
-  if (animFrame !== null) cancelAnimationFrame(animFrame);
-  function loopWx(timestamp) {
-    if (activeScreen !== 'weather') { animFrame = null; return; }
-    try {
-      drawMiniRadarWx(timestamp);
-    } catch (error) {
-      // PATCH: replaced empty catch — surface the true error
-      console.error('StormPath Runtime Error [WEATHER loop]:', error);
-    }
-    animFrame = requestAnimationFrame(loopWx);
-  }
-  animFrame = requestAnimationFrame(loopWx);
 }
 
 // ────────────────────────────────────────────────
@@ -3302,7 +3154,9 @@ function runStartupSafetyChecks() {
 
   // §10.1 — Canvas validation: existence, type, callable getContext, non-null 2d context.
   // Hidden-screen zero dimensions must NOT count as startup failure.
-  const requiredCanvasIds = ['mapCanvas', 'radarCanvas', 'miniRadar', 'miniRadarWx'];
+  // (radarImg/miniRadar/miniRadarWx are now real NWS radar <img> elements,
+  // not canvases — validated separately below.)
+  const requiredCanvasIds = ['mapCanvas'];
   const canvasResults = requiredCanvasIds.map(id => {
     try {
       const c = document.getElementById(id);
@@ -3317,6 +3171,17 @@ function runStartupSafetyChecks() {
   });
   const canvasFailed = canvasResults.filter(r => !r.ok);
   if (canvasFailed.length > 0) failures.push('CANVAS');
+
+  // §10.1b — Real radar imagery <img> elements must exist. A missing element
+  // here would silently drop the live NWS radar mosaic without any visible
+  // failure, so it's treated the same as a missing canvas.
+  const requiredRadarImgIds = ['radarImg', 'miniRadar', 'miniRadarWx'];
+  const radarImgResults = requiredRadarImgIds.map(id => {
+    const el = document.getElementById(id);
+    return { id, ok: !!el && el instanceof HTMLImageElement };
+  });
+  const radarImgFailed = radarImgResults.filter(r => !r.ok);
+  if (radarImgFailed.length > 0) failures.push('RADARIMG');
 
   // §10.2 — State-engine validation: all 6 keys present with required fields
   const requiredStateKeys = ['normal', 'caution', 'danger', 'stop', 'safe', 'offline'];
@@ -3458,7 +3323,7 @@ function runStartupSafetyChecks() {
   }
   if (!confidenceReady) failures.push('CONFIDENCE');
 
-  return { passed: failures.length === 0, failures, canvasFailed };
+  return { passed: failures.length === 0, failures, canvasFailed, radarImgFailed };
 }
 
 // V1.3.5 QC CORRECTION 4: spInit always uses SP_STARTUP_SAFE_FALLBACK on failure
@@ -3597,9 +3462,16 @@ function spOnPositionSuccess(pos) {
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
   spUpdateCoordsDisplay();
   if (activeScreen === 'map') drawMap();
-  // Weather is only ever fetched once a real GPS fix exists, and only once
-  // per session (not on every watchPosition tick) to avoid hammering NWS.
-  if (!hadFixBefore) spFetchWeather(spCoords.lat, spCoords.lon);
+  // Weather and radar imagery are only ever fetched once a real GPS fix
+  // exists — never against fake/placeholder coords. The initial fetch
+  // happens once per session; radar imagery then keeps itself current via
+  // spStartRadarRefresh() on a timer (weather isn't polled repeatedly to
+  // avoid hammering NWS).
+  if (!hadFixBefore) {
+    spFetchWeather(spCoords.lat, spCoords.lon);
+    spFetchRadarImage(spCoords.lat, spCoords.lon);
+    spStartRadarRefresh();
+  }
 }
 
 // Any GPS failure (permission denied, position unavailable, timeout) is
