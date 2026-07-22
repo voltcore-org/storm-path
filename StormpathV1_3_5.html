@@ -2672,7 +2672,14 @@ function spBuildRadarUrl(lat, lon) {
   const params = new URLSearchParams({
     service: 'WMS', version: '1.1.1', request: 'GetMap',
     layers: 'conus_bref_qcd', styles: '', format: 'image/png',
-    transparent: 'true', srs: 'EPSG:4326',
+    transparent: 'true',
+    // CRS:84 (not EPSG:4326) is deliberate: EPSG:4326's axis order flips
+    // between WMS 1.1.1 (lon,lat) and WMS 1.3.0 (lat,lon, per the
+    // authority-defined axis order) — a classic "request looks fine, image
+    // silently fails to decode" WMS bug. CRS:84 is defined by OGC to always
+    // mean WGS84 in lon,lat order regardless of WMS version, so the bbox
+    // below (minLon,minLat,maxLon,maxLat) is unambiguous either way.
+    srs: 'CRS:84',
     bbox: [minLon, minLat, maxLon, maxLat].join(','),
     width: String(SP_RADAR_IMG_PX), height: String(SP_RADAR_IMG_PX)
   });
@@ -2704,10 +2711,26 @@ function spHideRadarImages() {
 // routed into SAFE MODE — never a silent fallback to fake blobs.
 function spFetchRadarImage(lat, lon) {
   if (spRadarFetchInFlight) return;
+
+  // Guard against a degenerate/garbage bbox (NaN or non-finite coords)
+  // ever reaching the WMS server as a malformed request — fail loud into
+  // SAFE MODE instead of sending a request that can only fail.
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    console.warn('StormPath radar fetch aborted — non-finite GPS coordinates: lat=' + lat + ' lon=' + lon);
+    spSetState('safe');
+    return;
+  }
+
   spRadarFetchInFlight = true;
   spSetRadarStatus('RADAR · LOADING…');
 
   const url = spBuildRadarUrl(lat, lon);
+  // Logged with the real bbox/coordinates filled in so the exact request
+  // can be inspected — e.g. pasted directly into a browser tab to see the
+  // raw WMS response, including any OGC ServiceExceptionReport body a
+  // failed <img> load can't surface on its own.
+  console.warn('StormPath radar WMS request URL: ' + url);
+
   const probe = new Image();
   probe.onload = () => {
     spRadarFetchInFlight = false;
