@@ -1249,6 +1249,26 @@
   #sp-dev-panel button:hover { background: rgba(0,229,255,0.12); border-color: var(--cyan); color: var(--cyan); }
   #sp-dev-panel button.active-state { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.1); }
 
+  #sp-dev-radar-status {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+  }
+
+  #sp-dev-radar-url {
+    width: 240px;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: 'Courier New', monospace;
+    font-size: 0.56rem;
+    line-height: 1.35;
+    color: rgba(0,229,255,0.9);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 2px;
+    padding: 5px;
+    resize: vertical;
+  }
+
 /* ═══════════════════════════════════════════════════════
    STORMPATH V1.3.3 — PHASE 4 USER EXPERIENCE POLISH
    Additive overrides only. Core engines remain unchanged.
@@ -2393,6 +2413,10 @@ body {
   <button onclick="spSetState('stop')"    id="sp-btn-stop">STOP</button>
   <button onclick="spSetState('safe')"    id="sp-btn-safe">SAFE MODE</button>
   <button onclick="spSetState('offline')" id="sp-btn-offline">OFFLINE MODE</button>
+
+  <div class="sp-dev-title" style="margin-top:8px;">RADAR WMS DEBUG</div>
+  <div id="sp-dev-radar-status">NO REQUEST YET</div>
+  <textarea id="sp-dev-radar-url" readonly rows="4" onclick="this.select()">(no request yet)</textarea>
 </div>
 
 <script>
@@ -2707,6 +2731,17 @@ function spHideRadarImages() {
   });
 }
 
+// Mirrors the radar request/outcome into the DEV panel so it can be read
+// on a device with no way to open dev tools / a console (e.g. no Mac for
+// Web Inspector on iOS Safari). url is left unset (undefined) on calls that
+// only update status, so the last-sent URL stays visible for copy/paste.
+function spSetRadarDebugPanel(status, url) {
+  const statusEl = document.getElementById('sp-dev-radar-status');
+  const urlEl = document.getElementById('sp-dev-radar-url');
+  if (statusEl && status !== undefined) statusEl.textContent = status;
+  if (urlEl && url !== undefined) urlEl.value = url;
+}
+
 // Fetches the real radar mosaic centered on (lat, lon). Any failure is
 // routed into SAFE MODE — never a silent fallback to fake blobs.
 function spFetchRadarImage(lat, lon) {
@@ -2717,6 +2752,7 @@ function spFetchRadarImage(lat, lon) {
   // SAFE MODE instead of sending a request that can only fail.
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     console.warn('StormPath radar fetch aborted — non-finite GPS coordinates: lat=' + lat + ' lon=' + lon);
+    spSetRadarDebugPanel('ABORTED — non-finite GPS coords: lat=' + lat + ' lon=' + lon, '(no request sent)');
     spSetState('safe');
     return;
   }
@@ -2728,8 +2764,10 @@ function spFetchRadarImage(lat, lon) {
   // Logged with the real bbox/coordinates filled in so the exact request
   // can be inspected — e.g. pasted directly into a browser tab to see the
   // raw WMS response, including any OGC ServiceExceptionReport body a
-  // failed <img> load can't surface on its own.
+  // failed <img> load can't surface on its own. Also mirrored into the DEV
+  // panel (tap the URL box to select-all/copy) for devices with no console.
   console.warn('StormPath radar WMS request URL: ' + url);
+  spSetRadarDebugPanel('REQUEST SENT · ' + new Date().toLocaleTimeString('en-US', { hour12: false }), url);
 
   const probe = new Image();
   probe.onload = () => {
@@ -2737,12 +2775,14 @@ function spFetchRadarImage(lat, lon) {
     spApplyRadarImage(url);
     const now = new Date();
     spSetRadarStatus('RADAR · LIVE · ' + now.toLocaleTimeString('en-US', { hour12: false }));
+    spSetRadarDebugPanel('LOADED OK · ' + now.toLocaleTimeString('en-US', { hour12: false }));
   };
   probe.onerror = () => {
     spRadarFetchInFlight = false;
     console.warn('StormPath radar imagery failed to load from opengeo.ncep.noaa.gov WMS — entering SAFE MODE.');
     spHideRadarImages();
     spSetRadarStatus('RADAR · UNAVAILABLE');
+    spSetRadarDebugPanel('FAILED TO LOAD — paste the URL below into a browser tab to see the raw WMS response.');
     spSetState('safe');
   };
   probe.src = url;
