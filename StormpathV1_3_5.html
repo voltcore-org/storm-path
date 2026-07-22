@@ -1856,28 +1856,28 @@ body {
 <!-- ════════════════════════════════════════════════
      SCREEN 1: DRIVER
      ════════════════════════════════════════════════ -->
-<div id="screen-driver" class="sp-screen active state-danger">
+<div id="screen-driver" class="sp-screen active state-safe">
 <div class="sp-screen-title" aria-hidden="true">DRIVER</div>
 
   <div class="sp-statebar">
-    <div class="sp-state-label" id="sp-state-label">DANGER</div>
-    <div class="sp-conf" id="sp-conf-label">CONFIDENCE: N/A<span class="sp-conf-badge conf-low" id="sp-conf-badge">LOW</span></div>
+    <div class="sp-state-label" id="sp-state-label">SAFE MODE</div>
+    <div class="sp-conf" id="sp-conf-label">CONFIDENCE: N/A<span class="sp-conf-badge conf-unknown" id="sp-conf-badge">UNKNOWN</span></div>
   </div>
 
   <div class="sp-source-panel" id="sp-source-panel">
     <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>NOAA</div>
-    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>NWS</div>
+    <div class="sp-source-chip src-unavailable"><span class="sp-source-dot"></span>NWS</div>
     <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>DOT</div>
-    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>EMERG MGMT</div>
+    <div class="sp-source-chip src-unavailable"><span class="sp-source-dot"></span>EMERG MGMT</div>
     <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>ROAD CLOSURES</div>
     <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>SHELTERS</div>
   </div>
 
   <div class="sp-center">
-    <div class="sp-action-icon" id="sp-action-icon">⛔</div>
-    <div class="sp-action" id="sp-action-text">TAKE STORM REROUTE</div>
+    <div class="sp-action-icon" id="sp-action-icon">◈</div>
+    <div class="sp-action" id="sp-action-text">PROCEED WITH CAUTION</div>
     <div class="sp-reason" id="sp-reason-text">
-      A severe simulated storm cell crosses your route in about 9 minutes.
+      Source data is low-confidence, conflicting, or stale. Storm Path has reduced complexity and increased conservatism.
     </div>
     <div class="sp-placeholder-badge" id="sp-placeholder-badge">PROTOTYPE DATA · SIMULATED · NOT LIVE</div>
 
@@ -1896,7 +1896,7 @@ body {
 
   <div class="sp-fallback">
     <div class="sp-fallback-label">FALLBACK STATE</div>
-    <div class="sp-fallback-text" id="sp-fallback-text">If conditions change, Storm Path will escalate to CAUTION automatically.</div>
+    <div class="sp-fallback-text" id="sp-fallback-text">Storm Path will not increase confidence until trusted source data improves. Defaulting to the most conservative available action.</div>
   </div>
 
 </div><!-- /#screen-driver -->
@@ -2019,12 +2019,12 @@ body {
       <div class="panel-section">
         <div class="section-label">CURRENT CONDITIONS</div>
         <div class="weather-strip">
-          <div class="wx-chip">🌡 <span>74°F</span></div>
-          <div class="wx-chip">💨 <span>22 mph</span> SW</div>
-          <div class="wx-chip">💧 <span>89%</span> RH</div>
-          <div class="wx-chip">📊 <span>29.62"</span> Hg</div>
-          <div class="wx-chip">👁 <span>4 mi</span> VIS</div>
-          <div class="wx-chip">⚡ <span>ELEV</span> CAPE</div>
+          <div class="wx-chip">🌡 <span class="wx-val-temp">--</span></div>
+          <div class="wx-chip">💨 <span class="wx-val-wind-speed">--</span> <span class="wx-val-wind-dir">--</span></div>
+          <div class="wx-chip">💧 <span class="wx-val-humidity">--</span> RH</div>
+          <div class="wx-chip">📊 <span class="wx-val-pressure">--</span> Hg</div>
+          <div class="wx-chip">👁 <span class="wx-val-visibility">--</span> VIS</div>
+          <div class="wx-chip">⚡ <span class="wx-val-cape">--</span> CAPE</div>
         </div>
       </div>
 
@@ -2245,12 +2245,12 @@ body {
       <div>
         <div class="wx-title">CURRENT CONDITIONS</div>
         <div class="weather-strip">
-          <div class="wx-chip">🌡 <span>74°F</span></div>
-          <div class="wx-chip">💨 <span>22 mph</span> SW</div>
-          <div class="wx-chip">💧 <span>89%</span> RH</div>
-          <div class="wx-chip">📊 <span>29.62"</span> Hg</div>
-          <div class="wx-chip">👁 <span>4 mi</span> VIS</div>
-          <div class="wx-chip">⚡ <span>ELEV</span> CAPE</div>
+          <div class="wx-chip">🌡 <span class="wx-val-temp">--</span></div>
+          <div class="wx-chip">💨 <span class="wx-val-wind-speed">--</span> <span class="wx-val-wind-dir">--</span></div>
+          <div class="wx-chip">💧 <span class="wx-val-humidity">--</span> RH</div>
+          <div class="wx-chip">📊 <span class="wx-val-pressure">--</span> Hg</div>
+          <div class="wx-chip">👁 <span class="wx-val-visibility">--</span> VIS</div>
+          <div class="wx-chip">⚡ <span class="wx-val-cape">--</span> CAPE</div>
         </div>
       </div>
 
@@ -2326,15 +2326,10 @@ body {
      ════════════════════════════════════════════════ -->
 <div class="bottombar">
   <div class="status-item"><div class="status-item-dot" id="gps-status-dot"></div> <span id="gps-status-label">GPS ACQUIRING…</span></div>
-  <div class="status-item"><div class="status-item-dot" style="background:var(--amber)"></div> 3 SIMULATED ALERTS</div>
+  <div class="status-item"><div class="status-item-dot" style="background:var(--amber)"></div> <span id="wx-alert-count">AWAITING GPS FIX</span></div>
   <div class="ticker-wrap">
-    <div class="ticker">
-      ⚡ SIMULATED THUNDERSTORM SCENARIO — Prototype only · Not a live warning &nbsp;&nbsp;&nbsp;
-      🌪 SIMULATED WATCH BOX — Prototype scenario · 45 miles SW &nbsp;&nbsp;&nbsp;
-      🌧 SIMULATED FLOOD SCENARIO — Prototype only · Not a live watch &nbsp;&nbsp;&nbsp;
-      🚗 PROTOTYPE TRAFFIC DATA — Hwy 101 congestion scenario · Not live &nbsp;&nbsp;&nbsp;
-      💨 SIMULATED WIND SCENARIO — Gusts prototype data · Not a live advisory &nbsp;&nbsp;&nbsp;
-      🛑 PROTOTYPE ROAD DATA — Main St bridge scenario · Not a live closure &nbsp;&nbsp;&nbsp;
+    <div class="ticker" id="wx-ticker-content">
+      AWAITING GPS FIX FOR LIVE NWS ALERTS…
     </div>
   </div>
   <div id="coords" style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim)">
@@ -3129,40 +3124,42 @@ const SP_THRESHOLDS = {
 const SP_SOURCE_KEYS = ['NOAA','NWS','DOT','EMERG MGMT','ROAD CLOSURES','SHELTERS'];
 
 // V1.3.5 REPAIR 4: complete runtime state definitions.
-// danger is the approved initial scenario per spec section 4.1.
 // Prototype-only sources cannot produce HIGH or MEDIUM confidence (spec §7.3).
 // Trusted-source and live-data language removed from all states.
-// 'simulated' remains in reason where required by spec §4.1.
+// normal/caution/danger/stop are now reachable via the real NWS alert
+// decision engine (see spEvaluateAlertState) as well as the DEV panel, so
+// their reason/fallback copy describes NWS alert conditions rather than a
+// simulated scenario. Non-weather source categories (DOT, EMERG MGMT,
+// ROAD CLOSURES, SHELTERS) remain prototype-only — not live.
 const SP_STATES = {
   normal: {
     label:'NORMAL', confPercent:null, confLevel:'unknown', confLevelLabel:'UNKNOWN',
     icon:'✓', action:'CONTINUE ROUTE',
-    reason:'No simulated hazards detected on your route. Prototype data only — not live.',
-    fallback:'If conditions change, Storm Path will escalate to CAUTION automatically.',
+    reason:'No active NWS alerts for your location. Non-weather categories remain prototype data — not live.',
+    fallback:'If NWS alerts are issued for your route, Storm Path will escalate automatically.',
     showPlaceholder:true,
     sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
   },
   caution: {
     label:'CAUTION', confPercent:0, confLevel:'low', confLevelLabel:'LOW',
     icon:'⚠', action:'REDUCE SPEED',
-    reason:'Simulated data indicates elevated risk ahead on your route. Prototype only — not live.',
+    reason:'An active NWS Severe Thunderstorm or Flood Warning covers your location.',
     fallback:'If risk increases, Storm Path will escalate to DANGER. If data quality drops, Storm Path will enter SAFE MODE.',
     showPlaceholder:true,
     sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'unavailable','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
   },
   danger: {
-    // V1.3.5 REPAIR 1: approved initial severe simulated scenario (spec §4.1)
     label:'DANGER', confPercent:0, confLevel:'low', confLevelLabel:'LOW',
     icon:'⛔', action:'TAKE STORM REROUTE',
-    reason:'A severe simulated storm cell crosses your route in about 9 minutes.',
-    fallback:'Take the simulated storm reroute now. Storm Path will monitor for route clearance.',
+    reason:'An active NWS Tornado Warning or Extreme-severity alert covers your location.',
+    fallback:'Take a storm reroute now. Storm Path will monitor for route clearance.',
     showPlaceholder:true,
     sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
   },
   stop: {
     label:'STOP', confPercent:0, confLevel:'low', confLevelLabel:'LOW',
     icon:'🛑', action:'STOP NOW — REASSESS',
-    reason:'Simulated conditions ahead require an immediate stop before continuing.',
+    reason:'An active, immediate-urgency NWS alert (e.g. a Tornado Emergency) requires an immediate stop.',
     fallback:'Remain stopped until Storm Path confirms a safe action, or follow official emergency guidance if present.',
     showPlaceholder:true,
     sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
@@ -3185,8 +3182,10 @@ const SP_STATES = {
   }
 };
 
-// V1.3.5 REPAIR 1: initial state is the approved severe simulated scenario
-let spCurrentState = 'danger';
+// Initial state is SAFE MODE — held until the real NWS alert decision
+// engine (spEvaluateAlertState, driven by spFetchWeather) resolves a real
+// state from live data. No guessing at startup, same as GPS handling.
+let spCurrentState = 'safe';
 
 // V1.3.5 REPAIR 2+3: spSetState — locked scope enforced.
 // NEVER adds/removes screen .active classes.
@@ -3330,8 +3329,8 @@ function runStartupSafetyChecks() {
       return requiredStateFields.every(f => Object.prototype.hasOwnProperty.call(s, f));
     });
   }
-  // Default runtime state (danger) must exist
-  const defaultStateKey = 'danger';
+  // Default runtime state (safe) must exist
+  const defaultStateKey = 'safe';
   if (stateReady && !SP_STATES[defaultStateKey]) stateReady = false;
   if (!stateReady) failures.push('STATE');
 
@@ -3463,16 +3462,21 @@ function runStartupSafetyChecks() {
 }
 
 // V1.3.5 QC CORRECTION 4: spInit always uses SP_STARTUP_SAFE_FALLBACK on failure
-// — never prefers SP_STATES.safe during startup-failure recovery
+// — never prefers SP_STATES.safe during startup-failure recovery.
+// Startup always begins in SAFE MODE now: real state (normal/caution/danger/
+// stop) only comes from the NWS alert decision engine once GPS + weather
+// data have actually loaded — see spEvaluateAlertState / spFetchWeather.
 (function spInit() {
   const startup = runStartupSafetyChecks();
   const useSafeMode = !startup.passed;
 
   // CORRECTION 4: on any failure, use SP_STARTUP_SAFE_FALLBACK exclusively.
   // All six source statuses will be unavailable; confidence will be UNKNOWN.
-  const data = useSafeMode ? SP_STARTUP_SAFE_FALLBACK : SP_STATES.danger;
+  // On success, hold in the ordinary SAFE MODE state (SP_STATES.safe) until
+  // real NWS data resolves the actual state — never SP_STATES.danger.
+  const data = useSafeMode ? SP_STARTUP_SAFE_FALLBACK : SP_STATES.safe;
 
-  spCurrentState = useSafeMode ? 'safe' : 'danger';
+  spCurrentState = 'safe';
 
   if (useSafeMode) {
     // §10.5: one consolidated warning with all failure codes
@@ -3485,7 +3489,7 @@ function runStartupSafetyChecks() {
   if (!screen) return; // avoid uncaught exception if DOM missing
 
   // Startup SAFE MODE handling sets DRIVER active — the one permitted exception per spec §8
-  screen.className = 'sp-screen active state-' + (useSafeMode ? 'safe' : 'danger');
+  screen.className = 'sp-screen active state-safe';
 
   const stateLabel = document.getElementById('sp-state-label');
   if (stateLabel) stateLabel.textContent = data.label;
@@ -3521,7 +3525,7 @@ function runStartupSafetyChecks() {
   const panel = document.getElementById('sp-source-panel');
   if (panel) spRenderSourceChips(panel, data.sources);
 
-  const activeDevButton = document.getElementById(useSafeMode ? 'sp-btn-safe' : 'sp-btn-danger');
+  const activeDevButton = document.getElementById('sp-btn-safe');
   if (activeDevButton) activeDevButton.classList.add('active-state');
 
   // DRIVER is active at startup. MAP and WEATHER loops remain lazy-loaded.
@@ -3585,6 +3589,7 @@ function spUpdateCoordsDisplay() {
 }
 
 function spOnPositionSuccess(pos) {
+  const hadFixBefore = spGPSAvailable;
   spCoords.lat = pos.coords.latitude;
   spCoords.lon = pos.coords.longitude;
   spCoords.accuracy = pos.coords.accuracy;
@@ -3592,6 +3597,9 @@ function spOnPositionSuccess(pos) {
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
   spUpdateCoordsDisplay();
   if (activeScreen === 'map') drawMap();
+  // Weather is only ever fetched once a real GPS fix exists, and only once
+  // per session (not on every watchPosition tick) to avoid hammering NWS.
+  if (!hadFixBefore) spFetchWeather(spCoords.lat, spCoords.lon);
 }
 
 // Any GPS failure (permission denied, position unavailable, timeout) is
@@ -3627,6 +3635,186 @@ function spInitGeolocation() {
 }
 
 spInitGeolocation();
+
+// ────────────────────────────────────────────────
+//  REAL NWS WEATHER — replaces hardcoded 74°F / 22 mph SW / 89% RH /
+//  29.62" Hg / 4 mi VIS / ELEV CAPE and the simulated alert ticker.
+//  Flow (api.weather.gov, no API key required):
+//    1. GET /points/{lat},{lon}                              → forecast office + grid cell
+//    2. GET /gridpoints/{office}/{gridX},{gridY}/forecast/hourly → current conditions
+//    3. GET /alerts/active?point={lat},{lon}                  → real active alerts
+//  Step 2 uses the *hourly* gridpoint forecast rather than the 12-hour one:
+//  NWS removed relativeHumidity/dewpoint from the 12-hour /forecast endpoint
+//  in June 2024 (they don't hold constant over a 12h period) but kept them
+//  on /forecast/hourly — see https://github.com/weather-gov/api/discussions/752.
+//  Only ever runs once a real GPS fix exists (called from
+//  spOnPositionSuccess) — never fetched against fake/placeholder coords.
+//  Any failure (browser-blocked User-Agent, NWS 403/429, network error,
+//  malformed response) is logged via console.warn with the specific reason
+//  and routed into the same SAFE MODE pathway as GPS failure handling.
+//  On success, the real active-alerts list is run through
+//  spEvaluateAlertState() to pick the actual driver state — replacing the
+//  old hardcoded DANGER startup default.
+// ────────────────────────────────────────────────
+
+// NWS asks API consumers to identify their app + contact info in the
+// User-Agent so they can reach out about problem traffic. Note: browsers
+// treat "User-Agent" as a forbidden header and silently drop it from
+// fetch() requests rather than throwing — NWS's own guidance for browser
+// clients is that this is expected, and a resulting 403 is handled below
+// exactly like an explicit block.
+const SP_NWS_USER_AGENT = 'StormPath-Prototype/1.3.5 (weather safety prototype; dominic.calandro1991@yahoo.com)';
+let spWeatherFetchStarted = false;
+
+async function spNWSFetch(url) {
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: {
+        'User-Agent': SP_NWS_USER_AGENT,
+        'Accept': 'application/geo+json'
+      }
+    });
+  } catch (err) {
+    throw new Error('network error contacting api.weather.gov — ' + err.message);
+  }
+  if (res.status === 403) {
+    throw new Error('api.weather.gov returned 403 Forbidden for ' + url + ' — request blocked (User-Agent rejected or missing)');
+  }
+  if (res.status === 429) {
+    throw new Error('api.weather.gov returned 429 Too Many Requests for ' + url + ' — rate limited');
+  }
+  if (!res.ok) {
+    throw new Error('api.weather.gov returned HTTP ' + res.status + ' ' + res.statusText + ' for ' + url);
+  }
+  return res.json();
+}
+
+function spUpdateWeatherChips(data) {
+  const setAll = (cls, text) => document.querySelectorAll('.' + cls).forEach(el => { el.textContent = text; });
+  setAll('wx-val-temp', data.tempDisplay);
+  setAll('wx-val-wind-speed', data.windSpeedDisplay);
+  setAll('wx-val-wind-dir', data.windDirDisplay);
+  setAll('wx-val-humidity', data.humidityDisplay);
+  setAll('wx-val-pressure', data.pressureDisplay);
+  setAll('wx-val-visibility', data.visibilityDisplay);
+  setAll('wx-val-cape', data.capeDisplay);
+}
+
+function spUpdateAlertTicker(alerts) {
+  const countEl  = document.getElementById('wx-alert-count');
+  const tickerEl = document.getElementById('wx-ticker-content');
+  if (countEl) {
+    countEl.textContent = alerts.length === 0
+      ? 'NO ACTIVE NWS ALERTS'
+      : alerts.length + (alerts.length === 1 ? ' ACTIVE NWS ALERT' : ' ACTIVE NWS ALERTS');
+  }
+  if (tickerEl) {
+    if (alerts.length === 0) {
+      tickerEl.textContent = '✓ NO ACTIVE NWS ALERTS FOR THIS LOCATION — SOURCE: api.weather.gov';
+    } else {
+      tickerEl.textContent = alerts.map(a => {
+        const p = a.properties || {};
+        return '⚠ ' + (p.event || 'NWS ALERT') + ' — ' + (p.headline || p.areaDesc || 'See weather.gov for details');
+      }).join('     ');
+    }
+  }
+}
+
+// ── NWS alert → driver-state decision engine ──
+// Ranks so the single worst active alert across the whole /alerts/active
+// response wins. NORMAL is only reachable when there are zero active
+// alerts; anything active but not explicitly classified is held at
+// CAUTION rather than silently ignored (conservative-by-default, same
+// philosophy as the rest of the state engine).
+const SP_ALERT_STATE_RANK = { normal: 0, caution: 1, danger: 2, stop: 3 };
+
+function spClassifyAlert(alert) {
+  const p = (alert && alert.properties) || {};
+  const event    = (p.event || '').toLowerCase();
+  const severity = p.severity; // 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown'
+  const urgency  = p.urgency;  // 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown'
+
+  const isTornadoWarning = event.includes('tornado warning');
+  const isExtreme        = severity === 'Extreme';
+  const isImmediate      = urgency === 'Immediate';
+
+  // Tornado Warning or Extreme severity with Immediate urgency (e.g. a
+  // Tornado Emergency / PDS warning) — stop now.
+  if ((isTornadoWarning || isExtreme) && isImmediate) return 'stop';
+  // Tornado Warning or Extreme severity without Immediate urgency — danger.
+  if (isTornadoWarning || isExtreme) return 'danger';
+  // Severe Thunderstorm Warning or Flood Warning — caution.
+  if (event.includes('severe thunderstorm warning') || event.includes('flood warning')) return 'caution';
+  // Any other active NWS alert — conservative minimum of caution.
+  return 'caution';
+}
+
+function spEvaluateAlertState(alerts) {
+  if (!alerts || alerts.length === 0) return 'normal';
+  let worst = 'normal';
+  alerts.forEach(alert => {
+    const cls = spClassifyAlert(alert);
+    if (SP_ALERT_STATE_RANK[cls] > SP_ALERT_STATE_RANK[worst]) worst = cls;
+  });
+  return worst;
+}
+
+async function spFetchWeather(lat, lon) {
+  if (spWeatherFetchStarted) return;
+  spWeatherFetchStarted = true;
+  try {
+    const latQ = lat.toFixed(4), lonQ = lon.toFixed(4);
+
+    const points = await spNWSFetch('https://api.weather.gov/points/' + latQ + ',' + lonQ);
+    const pointProps = points && points.properties;
+    const office = pointProps && pointProps.gridId;
+    const gridX  = pointProps && pointProps.gridX;
+    const gridY  = pointProps && pointProps.gridY;
+    if (!office || gridX === undefined || gridY === undefined) {
+      throw new Error('NWS /points response missing gridId/gridX/gridY');
+    }
+
+    const [forecast, alertsResp] = await Promise.all([
+      spNWSFetch('https://api.weather.gov/gridpoints/' + office + '/' + gridX + ',' + gridY + '/forecast/hourly'),
+      spNWSFetch('https://api.weather.gov/alerts/active?point=' + latQ + ',' + lonQ)
+    ]);
+
+    const period = forecast && forecast.properties && forecast.properties.periods && forecast.properties.periods[0];
+    if (!period) throw new Error('NWS hourly forecast response contained no forecast periods');
+
+    const humidityVal = period.relativeHumidity && typeof period.relativeHumidity.value === 'number'
+      ? Math.round(period.relativeHumidity.value) + '%'
+      : 'N/A';
+
+    spUpdateWeatherChips({
+      tempDisplay: (typeof period.temperature === 'number')
+        ? period.temperature + '°' + (period.temperatureUnit || 'F')
+        : 'N/A',
+      windSpeedDisplay: period.windSpeed || 'N/A',
+      windDirDisplay: period.windDirection || '',
+      humidityDisplay: humidityVal,
+      // Even the hourly gridpoint forecast endpoint does not publish
+      // barometric pressure or CAPE — shown as N/A rather than invented.
+      // (Visibility is on the raw /gridpoints/{office}/{x},{y} endpoint,
+      // not requested in this flow, so it's N/A too.)
+      pressureDisplay: 'N/A',
+      visibilityDisplay: 'N/A',
+      capeDisplay: 'N/A'
+    });
+
+    const alerts = (alertsResp && alertsResp.features) || [];
+    spUpdateAlertTicker(alerts);
+
+    const decidedState = spEvaluateAlertState(alerts);
+    console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' +
+      alerts.length + ' active alert(s) — state: ' + decidedState.toUpperCase());
+    spSetState(decidedState);
+  } catch (err) {
+    console.warn('StormPath NWS weather fetch failed — entering SAFE MODE. Reason: ' + err.message);
+    spSetState('safe');
+  }
+}
 </script>
 
 </body>
