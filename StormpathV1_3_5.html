@@ -144,6 +144,15 @@
     animation: alert-flash 1.5s ease-in-out infinite;
   }
 
+  /* Real NWS weather/alerts + real radar imagery both loaded successfully —
+     see spUpdateWxRadarBadge(). Not a warning state, so no flash animation. */
+  .alert-badge.live {
+    background: rgba(0,230,118,0.15);
+    border: 1px solid var(--green-safe);
+    color: var(--green-safe);
+    animation: none;
+  }
+
   @keyframes alert-flash {
     0%,100% { opacity:1; }
     50% { opacity:0.5; }
@@ -1899,7 +1908,7 @@ body {
   <div class="topbar-right">
     <div class="status-item"><div class="status-dot"></div> GPS SIMULATED</div>
     <div class="status-item"><div class="status-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div> RADAR SIMULATED</div>
-    <div class="alert-badge">⚠ WX DATA SIMULATED</div>
+    <div class="alert-badge" id="wx-radar-status-badge">⚠ AWAITING GPS FIX</div>
     <div id="clock" style="font-family:'Courier New',monospace;font-size:0.72rem;color:var(--cyan-dim)">--:--:--</div>
   </div>
 </div>
@@ -2692,6 +2701,32 @@ const SP_RADAR_REFRESH_MS = 5 * 60 * 1000; // NWS composite mosaic refreshes eve
 let spRadarFetchInFlight = false;
 let spRadarRefreshTimer = null;
 
+// ── Shared header badge ("⚠ WX DATA SIMULATED" in the markup this replaces) ──
+// Was a hardcoded string in the shared topbar, wired to nothing — never
+// updated when real NWS weather/alerts (Phase 2) or real radar imagery
+// (Phase 3) landed. Now driven by the actual outcome of the weather and
+// radar fetches below: null = not yet attempted (gated behind a GPS fix,
+// same as the fetches themselves), true = last attempt succeeded, false =
+// last attempt failed (and the app already fell back to SAFE MODE via
+// spSetState('safe') at the failure site).
+let spWeatherOK = null;
+let spRadarOK = null;
+
+function spUpdateWxRadarBadge() {
+  const el = document.getElementById('wx-radar-status-badge');
+  if (!el) return;
+  if (spWeatherOK === true && spRadarOK === true) {
+    el.textContent = '✓ WX + RADAR LIVE';
+    el.classList.add('live');
+  } else if (spWeatherOK === false || spRadarOK === false) {
+    el.textContent = '⚠ WX/RADAR UNAVAILABLE — SAFE MODE';
+    el.classList.remove('live');
+  } else {
+    el.textContent = '⚠ AWAITING GPS FIX';
+    el.classList.remove('live');
+  }
+}
+
 function spBuildRadarUrl(lat, lon) {
   const half = SP_RADAR_SPAN_DEG / 2;
   const minLon = lon - half, maxLon = lon + half;
@@ -2797,6 +2832,8 @@ function spFetchRadarImage(lat, lon) {
     console.warn('StormPath radar fetch aborted — non-finite GPS coordinates: lat=' + lat + ' lon=' + lon);
     spSetRadarDebugPanel('ABORTED — non-finite GPS coords: lat=' + lat + ' lon=' + lon, '(no request sent)');
     spSetState('safe');
+    spRadarOK = false;
+    spUpdateWxRadarBadge();
     return;
   }
 
@@ -2819,6 +2856,8 @@ function spFetchRadarImage(lat, lon) {
     const now = new Date();
     spSetRadarStatus('RADAR · LIVE · ' + now.toLocaleTimeString('en-US', { hour12: false }));
     spSetRadarDebugPanel('LOADED OK · ' + now.toLocaleTimeString('en-US', { hour12: false }));
+    spRadarOK = true;
+    spUpdateWxRadarBadge();
   };
   probe.onerror = () => {
     spRadarFetchInFlight = false;
@@ -2827,6 +2866,8 @@ function spFetchRadarImage(lat, lon) {
     spSetRadarStatus('RADAR · UNAVAILABLE');
     spSetRadarDebugPanel('FAILED TO LOAD — paste the URL below into a browser tab to see the raw WMS response.');
     spSetState('safe');
+    spRadarOK = false;
+    spUpdateWxRadarBadge();
   };
   probe.src = url;
 }
@@ -3613,6 +3654,7 @@ function spInitGeolocation() {
 }
 
 spInitGeolocation();
+spUpdateWxRadarBadge();
 
 // ────────────────────────────────────────────────
 //  REAL NWS WEATHER — replaces hardcoded 74°F / 22 mph SW / 89% RH /
@@ -3788,9 +3830,13 @@ async function spFetchWeather(lat, lon) {
     console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' +
       alerts.length + ' active alert(s) — state: ' + decidedState.toUpperCase());
     spSetState(decidedState);
+    spWeatherOK = true;
+    spUpdateWxRadarBadge();
   } catch (err) {
     console.warn('StormPath NWS weather fetch failed — entering SAFE MODE. Reason: ' + err.message);
     spSetState('safe');
+    spWeatherOK = false;
+    spUpdateWxRadarBadge();
   }
 }
 </script>
