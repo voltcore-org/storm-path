@@ -2689,9 +2689,11 @@ function drawMap() {
 //  Displayed via plain <img> elements, not canvas: we only ever show
 //  the image, never read its pixels, so no CORS/tainted-canvas handling
 //  is needed.
-//  Any failure (network error, non-2xx, image decode failure) is routed
-//  into SAFE MODE via spSetState('safe') — the same pathway GPS and NWS
-//  weather failures use. There is no fallback to simulated imagery.
+//  Any failure (network error, non-2xx, image decode failure) sets
+//  spRadarOK = false and calls spRecomputeState() — the same recompute
+//  path GPS and NWS weather failures use, so SAFE MODE holds regardless
+//  of what order the other fetches finish in. There is no fallback to
+//  simulated imagery.
 // ────────────────────────────────────────────────
 const SP_RADAR_WMS_BASE = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
 const SP_RADAR_SPAN_DEG = 2.5; // ~170mi square view centered on the driver's real GPS fix
@@ -2707,10 +2709,16 @@ let spRadarRefreshTimer = null;
 // (Phase 3) landed. Now driven by the actual outcome of the weather and
 // radar fetches below: null = not yet attempted (gated behind a GPS fix,
 // same as the fetches themselves), true = last attempt succeeded, false =
-// last attempt failed (and the app already fell back to SAFE MODE via
-// spSetState('safe') at the failure site).
+// last attempt failed (see spRecomputeState() for how a failure here
+// reaches SAFE MODE).
 let spWeatherOK = null;
 let spRadarOK = null;
+
+// Most recent NWS alert-derived state ('normal'|'caution'|'danger'|'stop'),
+// computed by spEvaluateAlertState() whenever weather succeeds. Only ever
+// applied by spRecomputeState() once GPS, weather, AND radar are all
+// currently OK — see below.
+let spLastAlertState = null;
 
 function spUpdateWxRadarBadge() {
   const el = document.getElementById('wx-radar-status-badge');
@@ -2725,6 +2733,25 @@ function spUpdateWxRadarBadge() {
     el.textContent = '⚠ AWAITING GPS FIX';
     el.classList.remove('live');
   }
+}
+
+// Single source of truth for the driver-facing state. GPS, weather, and
+// radar each report their own current status independently (via
+// spGPSAvailable / spWeatherOK / spRadarOK) and call this function after
+// every change — nobody calls spSetState() directly from a fetch callback
+// anymore. That was the root of the race a prior test caught: whichever
+// async call happened to finish last silently overwrote whatever an
+// earlier call had already set (e.g. a late-resolving weather success
+// stomping an earlier radar-triggered SAFE MODE). By always recomputing
+// fresh from all three current flags — instead of trusting whichever
+// caller ran most recently — call order can no longer matter.
+// SAFE MODE whenever GPS, weather, or radar is not currently confirmed OK.
+// Only once all three are OK does the real NWS alert-derived state apply.
+function spRecomputeState() {
+  const allSourcesOK = spGPSAvailable === true && spWeatherOK === true && spRadarOK === true;
+  const nextState = allSourcesOK ? (spLastAlertState || 'normal') : 'safe';
+  spSetState(nextState);
+  spUpdateWxRadarBadge();
 }
 
 function spBuildRadarUrl(lat, lon) {
@@ -2831,9 +2858,8 @@ function spFetchRadarImage(lat, lon) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     console.warn('StormPath radar fetch aborted — non-finite GPS coordinates: lat=' + lat + ' lon=' + lon);
     spSetRadarDebugPanel('ABORTED — non-finite GPS coords: lat=' + lat + ' lon=' + lon, '(no request sent)');
-    spSetState('safe');
     spRadarOK = false;
-    spUpdateWxRadarBadge();
+    spRecomputeState();
     return;
   }
 
@@ -2857,7 +2883,7 @@ function spFetchRadarImage(lat, lon) {
     spSetRadarStatus('RADAR · LIVE · ' + now.toLocaleTimeString('en-US', { hour12: false }));
     spSetRadarDebugPanel('LOADED OK · ' + now.toLocaleTimeString('en-US', { hour12: false }));
     spRadarOK = true;
-    spUpdateWxRadarBadge();
+    spRecomputeState();
   };
   probe.onerror = () => {
     spRadarFetchInFlight = false;
@@ -2865,9 +2891,8 @@ function spFetchRadarImage(lat, lon) {
     spHideRadarImages();
     spSetRadarStatus('RADAR · UNAVAILABLE');
     spSetRadarDebugPanel('FAILED TO LOAD — paste the URL below into a browser tab to see the raw WMS response.');
-    spSetState('safe');
     spRadarOK = false;
-    spUpdateWxRadarBadge();
+    spRecomputeState();
   };
   probe.src = url;
 }
@@ -3609,6 +3634,7 @@ function spOnPositionSuccess(pos) {
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
   spUpdateCoordsDisplay();
   if (activeScreen === 'map') drawMap();
+  spRecomputeState();
   // Weather and radar imagery are only ever fetched once a real GPS fix
   // exists — never against fake/placeholder coords. The initial fetch
   // happens once per session; radar imagery then keeps itself current via
@@ -3622,8 +3648,9 @@ function spOnPositionSuccess(pos) {
 }
 
 // Any GPS failure (permission denied, position unavailable, timeout) is
-// routed into SAFE MODE via the same spSetState() path the DEV panel and
-// startup safety checks use — never a silent fallback to fake coordinates.
+// routed into SAFE MODE via spRecomputeState() — the same fresh-recompute
+// path weather and radar failures use — never a silent fallback to fake
+// coordinates.
 function spOnPositionError(err) {
   spGPSAvailable = false;
   let reason;
@@ -3636,7 +3663,7 @@ function spOnPositionError(err) {
   console.warn('StormPath GPS failure — entering SAFE MODE. Reason: ' + reason);
   spSetGPSStatus('GPS ' + (err.code === err.PERMISSION_DENIED ? 'DENIED' : 'UNAVAILABLE'), 'var(--red-alert)');
   spUpdateCoordsDisplay();
-  spSetState('safe');
+  spRecomputeState();
   if (activeScreen === 'map') drawMap();
 }
 
@@ -3645,7 +3672,7 @@ function spInitGeolocation() {
     console.warn('StormPath GPS failure — entering SAFE MODE. Reason: Geolocation API unavailable in this browser.');
     spSetGPSStatus('GPS UNAVAILABLE', 'var(--red-alert)');
     spUpdateCoordsDisplay();
-    spSetState('safe');
+    spRecomputeState();
     return;
   }
   const gpsOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
@@ -3654,7 +3681,7 @@ function spInitGeolocation() {
 }
 
 spInitGeolocation();
-spUpdateWxRadarBadge();
+spRecomputeState();
 
 // ────────────────────────────────────────────────
 //  REAL NWS WEATHER — replaces hardcoded 74°F / 22 mph SW / 89% RH /
@@ -3829,14 +3856,13 @@ async function spFetchWeather(lat, lon) {
     const decidedState = spEvaluateAlertState(alerts);
     console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' +
       alerts.length + ' active alert(s) — state: ' + decidedState.toUpperCase());
-    spSetState(decidedState);
+    spLastAlertState = decidedState;
     spWeatherOK = true;
-    spUpdateWxRadarBadge();
+    spRecomputeState();
   } catch (err) {
     console.warn('StormPath NWS weather fetch failed — entering SAFE MODE. Reason: ' + err.message);
-    spSetState('safe');
     spWeatherOK = false;
-    spUpdateWxRadarBadge();
+    spRecomputeState();
   }
 }
 </script>
