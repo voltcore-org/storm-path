@@ -144,6 +144,13 @@
     animation: alert-flash 1.5s ease-in-out infinite;
   }
 
+  .alert-badge.wx-live {
+    background: rgba(0,230,118,0.15);
+    border: 1px solid var(--green-safe);
+    color: var(--green-safe);
+    animation: none;
+  }
+
   @keyframes alert-flash {
     0%,100% { opacity:1; }
     50% { opacity:0.5; }
@@ -1899,7 +1906,7 @@ body {
   <div class="topbar-right">
     <div class="status-item"><div class="status-dot"></div> GPS SIMULATED</div>
     <div class="status-item"><div class="status-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div> RADAR SIMULATED</div>
-    <div class="alert-badge">⚠ WX DATA SIMULATED</div>
+    <div class="alert-badge" id="sp-wx-status-badge">⚠ WX DATA OFFLINE</div>
     <div id="clock" style="font-family:'Courier New',monospace;font-size:0.72rem;color:var(--cyan-dim)">--:--:--</div>
   </div>
 </div>
@@ -2692,6 +2699,26 @@ const SP_RADAR_REFRESH_MS = 5 * 60 * 1000; // NWS composite mosaic refreshes eve
 let spRadarFetchInFlight = false;
 let spRadarRefreshTimer = null;
 
+// ── Header "WX DATA" badge — reflects real connection status ──
+// LIVE only once both real integrations (NWS weather/alerts, NEXRAD radar)
+// have successfully loaded; otherwise shows the same warning styling the
+// old hardcoded "SIMULATED" text used, but with accurate copy, since the
+// app has actually fallen back to SAFE MODE rather than simulated data.
+let spWxDataLive = false;
+let spRadarDataLive = false;
+
+function spUpdateWxStatusBadge() {
+  const el = document.getElementById('sp-wx-status-badge');
+  if (!el) return;
+  if (spWxDataLive && spRadarDataLive) {
+    el.textContent = '✓ WX DATA LIVE';
+    el.classList.add('wx-live');
+  } else {
+    el.textContent = '⚠ WX DATA OFFLINE';
+    el.classList.remove('wx-live');
+  }
+}
+
 function spBuildRadarUrl(lat, lon) {
   const half = SP_RADAR_SPAN_DEG / 2;
   const minLon = lon - half, maxLon = lon + half;
@@ -2796,6 +2823,8 @@ function spFetchRadarImage(lat, lon) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     console.warn('StormPath radar fetch aborted — non-finite GPS coordinates: lat=' + lat + ' lon=' + lon);
     spSetRadarDebugPanel('ABORTED — non-finite GPS coords: lat=' + lat + ' lon=' + lon, '(no request sent)');
+    spRadarDataLive = false;
+    spUpdateWxStatusBadge();
     spSetState('safe');
     return;
   }
@@ -2819,6 +2848,8 @@ function spFetchRadarImage(lat, lon) {
     const now = new Date();
     spSetRadarStatus('RADAR · LIVE · ' + now.toLocaleTimeString('en-US', { hour12: false }));
     spSetRadarDebugPanel('LOADED OK · ' + now.toLocaleTimeString('en-US', { hour12: false }));
+    spRadarDataLive = true;
+    spUpdateWxStatusBadge();
   };
   probe.onerror = () => {
     spRadarFetchInFlight = false;
@@ -2826,6 +2857,8 @@ function spFetchRadarImage(lat, lon) {
     spHideRadarImages();
     spSetRadarStatus('RADAR · UNAVAILABLE');
     spSetRadarDebugPanel('FAILED TO LOAD — paste the URL below into a browser tab to see the raw WMS response.');
+    spRadarDataLive = false;
+    spUpdateWxStatusBadge();
     spSetState('safe');
   };
   probe.src = url;
@@ -3787,9 +3820,13 @@ async function spFetchWeather(lat, lon) {
     const decidedState = spEvaluateAlertState(alerts);
     console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' +
       alerts.length + ' active alert(s) — state: ' + decidedState.toUpperCase());
+    spWxDataLive = true;
+    spUpdateWxStatusBadge();
     spSetState(decidedState);
   } catch (err) {
     console.warn('StormPath NWS weather fetch failed — entering SAFE MODE. Reason: ' + err.message);
+    spWxDataLive = false;
+    spUpdateWxStatusBadge();
     spSetState('safe');
   }
 }
