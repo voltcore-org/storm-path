@@ -2029,6 +2029,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .sp-sheet.open { transform: translateY(0); }
   @media (min-width: 840px) {
@@ -2956,10 +2958,10 @@ body {
   </div>
   <div class="sp-intel-grid">
     <button type="button" class="sp-intel-tile" data-type="unit"><span class="sp-intel-ico"><img src="intel/unit.png" width="80" height="56" alt=""></span><span class="t">UNIT</span><span class="d">Police / enforcement</span></button>
-    <button type="button" class="sp-intel-tile" data-type="collision"><svg viewBox="0 0 24 24"><path d="M4 17h16M7 17l2-7h6l2 7M9 10V7h6v3"></path></svg><span class="t">COLLISION</span><span class="d">Crash on the road</span></button>
-    <button type="button" class="sp-intel-tile" data-type="object"><svg viewBox="0 0 24 24"><path d="M12 3l9 18H3L12 3z"></path></svg><span class="t">OBJECT</span><span class="d">Tree, tire, rock, debris</span></button>
-    <button type="button" class="sp-intel-tile" data-type="construction"><svg viewBox="0 0 24 24"><path d="M3 20h18M8 20V10l4-4 4 4v10"></path></svg><span class="t">CONSTRUCTION</span><span class="d">Work zone</span></button>
-    <button type="button" class="sp-intel-tile" data-type="closure"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M8 8l8 8"></path></svg><span class="t">CLOSURE</span><span class="d">Lane or road closed</span></button>
+    <button type="button" class="sp-intel-tile" data-type="collision"><span class="sp-intel-ico"><img src="intel/collision.png" width="80" height="56" alt=""></span><span class="t">COLLISION</span><span class="d">Crash on the road</span></button>
+    <button type="button" class="sp-intel-tile" data-type="object"><span class="sp-intel-ico"><img src="intel/object.png" width="80" height="56" alt=""></span><span class="t">OBJECT</span><span class="d">Tree, tire, rock, debris</span></button>
+    <button type="button" class="sp-intel-tile" data-type="construction"><span class="sp-intel-ico"><img src="intel/construction.png" width="80" height="56" alt=""></span><span class="t">CONSTRUCTION</span><span class="d">Work zone</span></button>
+    <button type="button" class="sp-intel-tile" data-type="closure"><span class="sp-intel-ico"><img src="intel/closure.png" width="80" height="56" alt=""></span><span class="t">CLOSURE</span><span class="d">Lane or road closed</span></button>
     <button type="button" class="sp-intel-tile" data-type="weather"><svg viewBox="0 0 24 24"><path d="M7 16a5 5 0 1 1 4-9 6 6 0 0 1 6 9H7z"></path></svg><span class="t">WEATHER</span><span class="d">Flood, hail, ice, wind</span></button>
     <button type="button" class="sp-intel-tile" data-type="disabled"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="7"></rect><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span class="t">DISABLED</span><span class="d">Vehicle stopped</span></button>
     <button type="button" class="sp-intel-tile" data-type="pothole"><svg viewBox="0 0 24 24"><path d="M3 17c3-4 5 2 8-1s4 4 10 0"></path></svg><span class="t">SURFACE</span><span class="d">Pothole or damage</span></button>
@@ -5063,13 +5065,22 @@ function spPruneIntel(list) {
   return (list || []).filter(i => i && (now - i.ts) < SP_INTEL_TTL_MS);
 }
 
+const SP_INTEL_PHOTOS = {
+  unit: { url: 'intel/unit.png', w: 56, h: 44 },
+  collision: { url: 'intel/collision.png', w: 56, h: 33 },
+  object: { url: 'intel/object.png', w: 50, h: 56 },
+  construction: { url: 'intel/construction.png', w: 46, h: 56 },
+  closure: { url: 'intel/closure.png', w: 56, h: 46 }
+};
+
 function spIntelMapIcon(item) {
-  if (item.type === 'unit') {
+  const photo = SP_INTEL_PHOTOS[item.type];
+  if (photo) {
     return L.icon({
-      iconUrl: 'intel/unit.png',
-      iconSize: [56, 44],
-      iconAnchor: [28, 42],
-      popupAnchor: [0, -38]
+      iconUrl: photo.url,
+      iconSize: [photo.w, photo.h],
+      iconAnchor: [Math.round(photo.w / 2), photo.h - 2],
+      popupAnchor: [0, -(photo.h - 4)]
     });
   }
   return L.divIcon({
@@ -5100,8 +5111,9 @@ function spRenderIntelHazards() {
     return;
   }
   host.innerHTML = items.slice(0, 8).map(i => {
-    const thumb = i.type === 'unit'
-      ? '<img class="sp-hazard-photo" src="intel/unit.png" width="40" height="32" alt="">'
+    const photo = SP_INTEL_PHOTOS[i.type];
+    const thumb = photo
+      ? '<img class="sp-hazard-photo" src="' + photo.url + '" width="40" height="32" alt="">'
       : '<div class="hazard-sev med"></div>';
     return '<div class="hazard-item">' + thumb + '<div>' +
       '<div class="hazard-name"></div><div class="hazard-desc"></div></div></div>';
