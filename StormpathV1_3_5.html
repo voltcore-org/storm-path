@@ -2962,9 +2962,9 @@ body {
     <button type="button" class="sp-intel-tile" data-type="object"><span class="sp-intel-ico"><img src="intel/object.png" width="80" height="56" alt=""></span><span class="t">OBJECT</span><span class="d">Tree, tire, rock, debris</span></button>
     <button type="button" class="sp-intel-tile" data-type="construction"><span class="sp-intel-ico"><img src="intel/construction.png" width="80" height="56" alt=""></span><span class="t">CONSTRUCTION</span><span class="d">Work zone</span></button>
     <button type="button" class="sp-intel-tile" data-type="closure"><span class="sp-intel-ico"><img src="intel/closure.png" width="80" height="56" alt=""></span><span class="t">CLOSURE</span><span class="d">Lane or road closed</span></button>
-    <button type="button" class="sp-intel-tile" data-type="weather"><svg viewBox="0 0 24 24"><path d="M7 16a5 5 0 1 1 4-9 6 6 0 0 1 6 9H7z"></path></svg><span class="t">WEATHER</span><span class="d">Flood, hail, ice, wind</span></button>
-    <button type="button" class="sp-intel-tile" data-type="disabled"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="7"></rect><circle cx="8" cy="18" r="2"></circle><circle cx="16" cy="18" r="2"></circle></svg><span class="t">DISABLED</span><span class="d">Vehicle stopped</span></button>
-    <button type="button" class="sp-intel-tile" data-type="pothole"><svg viewBox="0 0 24 24"><path d="M3 17c3-4 5 2 8-1s4 4 10 0"></path></svg><span class="t">SURFACE</span><span class="d">Pothole or damage</span></button>
+    <button type="button" class="sp-intel-tile" data-type="weather"><span class="sp-intel-ico"><img src="intel/weather.png" width="80" height="56" alt=""></span><span class="t">WEATHER</span><span class="d">Flood, hail, ice, wind</span></button>
+    <button type="button" class="sp-intel-tile" data-type="disabled"><span class="sp-intel-ico"><img src="intel/disabled.png" width="80" height="56" alt=""></span><span class="t">DISABLED</span><span class="d">Vehicle stopped</span></button>
+    <button type="button" class="sp-intel-tile" data-type="pothole"><span class="sp-intel-ico"><img src="intel/pothole.png" width="80" height="56" alt=""></span><span class="t">SURFACE</span><span class="d">Pothole or damage</span></button>
   </div>
   <div id="sp-subtype-row" class="sp-subtype-row"></div>
   <button type="button" class="sp-post-intel" id="sp-post-intel">POST INTEL</button>
@@ -5070,7 +5070,10 @@ const SP_INTEL_PHOTOS = {
   collision: { url: 'intel/collision.png', w: 56, h: 33 },
   object: { url: 'intel/object.png', w: 50, h: 56 },
   construction: { url: 'intel/construction.png', w: 46, h: 56 },
-  closure: { url: 'intel/closure.png', w: 56, h: 46 }
+  closure: { url: 'intel/closure.png', w: 56, h: 46 },
+  weather: { url: 'intel/weather.png', w: 44, h: 56 },
+  disabled: { url: 'intel/disabled.png', w: 41, h: 56 },
+  pothole: { url: 'intel/pothole.png', w: 56, h: 52 }
 };
 
 function spIntelMapIcon(item) {
