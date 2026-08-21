@@ -93,9 +93,9 @@
 
   .mode-btn {
     font-family: 'Courier New', 'Lucida Console', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 2px;
-    padding: 6px 14px;
+    font-size: 0.62rem;
+    letter-spacing: 1.6px;
+    padding: 6px 10px;
     border: 1px solid var(--border);
     background: transparent;
     color: var(--text-secondary);
@@ -489,13 +489,14 @@
 
   .hud-speed {
     position: absolute;
-    bottom: 80px; right: 20px;
+    top: 12px; right: 16px;
+    bottom: auto;
     z-index: 10;
-    background: rgba(6,13,20,0.9);
+    background: rgba(6,13,20,0.92);
     border: 1px solid var(--border);
     padding: 12px 16px;
     text-align: center;
-    min-width: 80px;
+    min-width: 88px;
   }
 
   .speed-val {
@@ -904,7 +905,7 @@
   }
 
   .zoom-btn {
-    width: 34px; height: 34px;
+    width: 44px; height: 44px;
     background: rgba(6,13,20,0.9);
     border: 1px solid var(--border);
     color: var(--text-secondary);
@@ -1206,22 +1207,7 @@
     color: var(--text-secondary);
   }
 
-  /* ── DEV PANEL ── */
-  #sp-dev-toggle {
-    position: fixed;
-    bottom: 48px;
-    right: 14px;
-    z-index: 9999;
-    font-family: 'Courier New', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 1px;
-    padding: 7px 12px;
-    background: rgba(0,0,0,0.7);
-    border: 1px solid rgba(0,229,255,0.3);
-    color: rgba(0,229,255,0.7);
-    cursor: pointer;
-    border-radius: 3px;
-  }
+  #sp-dev-toggle, #sp-dev-panel { display: none !important; }
   #sp-dev-toggle:hover { background: rgba(0,0,0,0.9); border-color: var(--cyan); color: var(--cyan); }
 
   #sp-dev-panel {
@@ -2461,6 +2447,238 @@ body {
   .sp-veh-pack .t { font-family: 'Courier New', monospace; font-size: 0.72rem; letter-spacing: 1.8px; }
   .sp-veh-pack .d { font-size: 0.68rem; color: var(--text-secondary); }
 
+  #screen-map .right-panel { display: none !important; }
+  #screen-map.sp-map-clean .left-panel { display: none !important; }
+  #screen-map.sp-map-clean .map-wrap {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  #screen-map.sp-map-clean .map-screen-inner {
+    overflow: hidden !important;
+    flex-direction: row !important;
+  }
+  .map-wrap.live-map .scanlines,
+  .map-wrap.live-map .vignette,
+  .map-wrap.live-map .hud-compass { display: none !important; }
+  .hud-radar-time, .reroute-popup, .hud-storm-warning { display: none !important; }
+  .hud-nextturn { opacity: 0; pointer-events: none; }
+  .hud-nextturn.is-nav { opacity: 1; pointer-events: none; }
+  .hud-speed {
+    display: block !important;
+    top: 10px !important;
+    right: 10px !important;
+    bottom: auto !important;
+    z-index: 22;
+  }
+  .speed-val { font-variant-numeric: tabular-nums; }
+  .speed-live {
+    display: block;
+    margin-top: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.52rem;
+    letter-spacing: 1.4px;
+    color: var(--cyan);
+  }
+  .sp-locate svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+  }
+
+  #sp-route-host .sp-wx-block { display: none; }
+  #screen-driver .sp-center {
+    justify-content: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    align-items: stretch;
+  }
+  #screen-driver .sp-action-icon { font-size: 2.1rem; }
+  #screen-driver .sp-action { font-size: clamp(1.15rem, 3.6vw, 1.55rem); }
+  #screen-driver .sp-reason { font-size: 0.82rem; max-width: 36rem; margin-left: auto; margin-right: auto; }
+  #screen-driver .sp-driver-search,
+  #screen-driver .sp-driver-trip {
+    width: 100%;
+    max-width: 720px;
+    align-self: center;
+  }
+
+  .sp-driver-trip {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 14px 18px;
+  }
+  .sp-driver-trip .left-panel {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+  .sp-clock-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 8px 0 12px;
+  }
+  .sp-clock-cell {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 10px 6px 8px;
+    text-align: center;
+  }
+  .sp-clock-cell b {
+    display: block;
+    font-family: 'Courier New', monospace;
+    font-size: 1.35rem;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+  }
+  .sp-clock-cell span {
+    font-size: 0.58rem;
+    letter-spacing: 1.4px;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+  }
+  .sp-trip-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+  }
+  .sp-trip-meta strong { color: var(--cyan); font-weight: 600; }
+  .sp-end-drive {
+    display: none;
+    width: 100%;
+    min-height: 44px;
+    margin: 8px 0 12px;
+    border: 1px solid var(--red-alert);
+    background: rgba(255,61,61,0.1);
+    color: var(--red-alert);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1.6px;
+    cursor: pointer;
+  }
+  .sp-end-drive.show { display: block; }
+  .sp-note-field {
+    width: 100%;
+    min-height: 72px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.88rem;
+    resize: vertical;
+  }
+  .sp-go-row { display: flex; gap: 8px; margin-top: 10px; }
+  .sp-go-btn.later {
+    background: transparent;
+    color: var(--cyan);
+    border-color: var(--cyan);
+  }
+  .sp-plan-go {
+    border: 1px solid var(--cyan);
+    background: transparent;
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+    padding: 6px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    min-height: 36px;
+  }
+  .sp-set-head {
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 2.2px;
+    color: var(--cyan);
+    padding: 12px 4px 2px;
+  }
+  .sp-set-vault {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    white-space: pre-line;
+  }
+  .sp-intel-del, .sp-plan-del {
+    margin-left: auto;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+    padding: 6px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .sp-intel-del:hover, .sp-plan-del:hover { color: var(--red-alert); border-color: var(--red-alert); }
+  .hazard-item { display: flex; align-items: center; gap: 8px; }
+  .sp-plan-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--grid-line);
+  }
+  .sp-settings-list { display: flex; flex-direction: column; gap: 10px; padding: 16px; overflow-y: auto; }
+  .sp-set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .sp-set-row b { display: block; font-size: 0.88rem; }
+  .sp-set-row span { display: block; font-size: 0.72rem; color: var(--text-secondary); margin-top: 3px; }
+  .sp-set-row button, .sp-set-toggle {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--cyan);
+    background: transparent;
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.2px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .later-presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+  .later-presets button {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .later-presets button:hover, .later-presets button.active { border-color: var(--cyan); color: var(--cyan); }
+  #sp-later-when {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+
   .sp-toast {
     position: fixed;
     left: 50%;
@@ -2512,7 +2730,15 @@ body {
   @media (max-width: 620px) {
     .sp-nav-dock { left: 10px; right: 10px; bottom: 8px; }
     .hud-nextturn { left: 10px; right: 10px; min-width: 0; bottom: 128px; }
-    .hud-speed { display: none; }
+    .hud-speed {
+      display: block;
+      top: 10px;
+      right: 10px;
+      bottom: auto;
+      padding: 8px 10px;
+      min-width: 72px;
+    }
+    .speed-val { font-size: 1.6rem; }
     .hud-radar-time { display: none; }
     .sp-toast { white-space: normal; max-width: calc(100% - 24px); text-align: center; }
   }
@@ -2537,8 +2763,9 @@ body {
   <div class="topbar-center">
     <!-- PATCH: DRIVER / MAP / WEATHER navigation -->
     <button class="mode-btn active" id="nav-btn-driver"  onclick="switchScreen('driver')">⬤ DRIVER</button>
-    <button class="mode-btn"        id="nav-btn-map"     onclick="switchScreen('map')">🗺 MAP</button>
-    <button class="mode-btn"        id="nav-btn-weather" onclick="switchScreen('weather')">🌩 WEATHER</button>
+    <button class="mode-btn"        id="nav-btn-map"     onclick="switchScreen('map')">MAP</button>
+    <button class="mode-btn"        id="nav-btn-weather" onclick="switchScreen('weather')">WEATHER</button>
+    <button class="mode-btn"        id="nav-btn-settings" onclick="switchScreen('settings')">SETTINGS</button>
   </div>
   <div class="topbar-right">
     <div class="status-item"><div class="status-dot"></div> GPS SIMULATED</div>
@@ -2580,12 +2807,32 @@ body {
         <svg class="sp-search-glyph" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
         <div class="sp-search-copy">
           <div class="sp-search-kicker">NAVIGATE</div>
-          <div class="sp-search-dest is-empty">Set a destination</div>
+          <div class="sp-search-dest is-empty">Town, state, or address</div>
         </div>
       </button>
     </div>
 
-    <div class="sp-placeholder-badge" id="sp-placeholder-badge">PROTOTYPE DATA · SIMULATED · NOT LIVE</div>
+    <div id="sp-driver-trip" class="sp-driver-trip">
+      <div class="section-label">TIME TO ARRIVE</div>
+      <div class="sp-clock-row" id="sp-clock-row">
+        <div class="sp-clock-cell"><b id="sp-eta-d">0</b><span>DAYS</span></div>
+        <div class="sp-clock-cell"><b id="sp-eta-h">0</b><span>HOURS</span></div>
+        <div class="sp-clock-cell"><b id="sp-eta-m">0</b><span>MIN</span></div>
+        <div class="sp-clock-cell"><b id="sp-eta-s">0</b><span>SEC</span></div>
+      </div>
+      <div class="sp-trip-meta">
+        <span>REMAIN <strong id="sp-remain-mi">--</strong> MI</span>
+        <span>SPEED <strong id="sp-trip-spd">0</strong></span>
+        <span>LIMIT <strong id="sp-trip-lim">--</strong></span>
+        <span>DELAY <strong id="sp-trip-delay">0 MIN</strong></span>
+      </div>
+      <button type="button" class="sp-end-drive" id="sp-end-drive">END DRIVE</button>
+      <div id="sp-route-host"></div>
+      <div class="section-label">PLANNED DRIVES</div>
+      <div id="sp-plan-list"></div>
+    </div>
+
+    <div class="sp-placeholder-badge" id="sp-placeholder-badge" style="display:none">PROTOTYPE DATA · SIMULATED · NOT LIVE</div>
 
     <div class="sp-stop-banner">
       <div class="line-1">STOP</div>
@@ -2610,13 +2857,13 @@ body {
 <!-- ════════════════════════════════════════════════
      SCREEN 2: MAP
      ════════════════════════════════════════════════ -->
-<div id="screen-map" class="sp-screen">
+<div id="screen-map" class="sp-screen sp-map-clean">
 <div class="sp-screen-title" aria-hidden="true">MAP</div>
   <div class="map-screen-inner">
 
     <!-- LEFT PANEL -->
     <div class="left-panel">
-      <div class="panel-section">
+      <div class="panel-section sp-trip-block">
         <div class="section-label">ROUTE OVERVIEW</div>
         <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;font-family:'Courier New',monospace;">FROM</div>
         <div id="sp-from-name" style="font-size:0.82rem;font-weight:600;margin-bottom:8px;">Current location</div>
@@ -2642,7 +2889,7 @@ body {
         </div>
       </div>
 
-      <div class="panel-section">
+      <div class="panel-section sp-trip-block">
         <div class="section-label">TURN-BY-TURN</div>
         <div id="turns-list">
           <div class="turn-item active">
@@ -2690,12 +2937,12 @@ body {
         </div>
       </div>
 
-            <div class="panel-section">
+            <div class="panel-section sp-trip-block">
         <div class="section-label">DRIVER INTEL</div>
         <div id="sp-intel-hazards"></div>
       </div>
 
-      <div class="panel-section">
+      <div class="panel-section sp-wx-block">
         <div class="section-label">CURRENT CONDITIONS</div>
         <div class="weather-strip">
           <div class="wx-chip">🌡 <span class="wx-val-temp">--</span></div>
@@ -2707,7 +2954,7 @@ body {
         </div>
       </div>
 
-      <div class="panel-section">
+      <div class="panel-section sp-wx-block">
         <div class="section-label">dBZ SCALE (NWS BASE REFLECTIVITY)</div>
         <div class="radar-legend">
           <div class="legend-bar"></div>
@@ -2746,6 +2993,9 @@ body {
       </div>
 
       <div class="zoom-controls">
+        <button type="button" class="zoom-btn sp-locate" id="sp-locate" aria-label="Recenter on GPS">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>
+        </button>
         <button class="zoom-btn" onclick="zoomIn()">+</button>
         <button class="zoom-btn" onclick="zoomOut()">−</button>
       </div>
@@ -2762,17 +3012,18 @@ body {
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="nextturn-icon" id="nextturn-arrow">↑</div>
           <div>
-            <div class="nextturn-dist" id="nextturn-dist">0.4 mi</div>
-            <div class="nextturn-street" id="nextturn-street">Continue on Oak Ave</div>
-            <div class="nextturn-road" id="nextturn-road">STRAIGHT AHEAD</div>
+            <div class="nextturn-dist" id="nextturn-dist">—</div>
+            <div class="nextturn-street" id="nextturn-street">Set a destination</div>
+            <div class="nextturn-road" id="nextturn-road">SEARCH TO NAVIGATE</div>
           </div>
         </div>
       </div>
 
       <div class="hud-speed">
-        <div class="speed-val" id="speed-display">38</div>
-        <div class="speed-unit">MPH</div>
-        <div class="speed-limit" id="speed-limit">45</div>
+        <div class="speed-val" id="speed-display">--</div>
+        <div class="speed-unit" id="speed-unit">MPH</div>
+        <div class="speed-limit" id="speed-limit">--</div>
+        <span class="speed-live" id="speed-live">GPS SPEED</span>
       </div>
 
       <div class="hud-radar-time" id="radar-time">RADAR · AWAITING GPS FIX</div>
@@ -2791,7 +3042,7 @@ body {
           <svg class="sp-search-glyph" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
           <div class="sp-search-copy">
             <div class="sp-search-kicker">SET DESTINATION</div>
-            <div class="sp-search-dest is-empty">Address, place, or landmark</div>
+            <div class="sp-search-dest is-empty">Town, state, or address</div>
           </div>
         </button>
         <button type="button" class="sp-vehicle-btn" id="sp-vehicle-btn" aria-label="Choose your marker">
@@ -3035,6 +3286,61 @@ body {
   </div>
 </div><!-- /#screen-weather -->
 
+<div id="screen-settings" class="sp-screen">
+  <div class="sp-screen-title" aria-hidden="true">SETTINGS</div>
+  <div class="sp-settings-list">
+    <div class="sp-set-head">NAVIGATION</div>
+    <div class="sp-set-row">
+      <div><b>Speed units</b><span>Live GPS speed from this device — not simulated</span></div>
+      <button type="button" id="sp-set-units">MPH</button>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Speed limit badge</b><span>Posted limit next to your speed when the road has one</span></div>
+      <button type="button" id="sp-set-limit">ON</button>
+    </div>
+    <div class="sp-set-head">MAP</div>
+    <div class="sp-set-row">
+      <div><b>Map place names</b><span>US towns, cities, and streets on the GPS map</span></div>
+      <button type="button" id="sp-set-labels">ON</button>
+    </div>
+    <div class="sp-set-head">THIS DEVICE</div>
+    <div class="sp-set-row">
+      <div><b>Recent destinations</b><span>Clear search history on this device</span></div>
+      <button type="button" id="sp-set-recents">CLEAR</button>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Driver intel</b><span>Remove every pin you posted</span></div>
+      <button type="button" id="sp-set-intel">CLEAR</button>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Planned drives</b><span>Remove saved leave-later trips</span></div>
+      <button type="button" id="sp-set-plans">CLEAR</button>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Saved home / work</b><span>Wipe those two slots</span></div>
+      <button type="button" id="sp-set-saved">CLEAR</button>
+    </div>
+    <div class="sp-set-head">ACCOUNT</div>
+    <div class="sp-set-row">
+      <div>
+        <b>Customer vault</b>
+        <span>Sign-in is next — not this build. Until then every trip, pin, and setting stays on this device.</span>
+        <span class="sp-set-vault">When the vault lands it will hold:
+Profile — name and phone
+Emergency contacts
+Synced Home / Work / favorites
+Trip history across devices
+Shared driver intel on your account
+Privacy, data export, and account delete</span>
+      </div>
+    </div>
+    <div class="sp-set-head">ABOUT</div>
+    <div class="sp-set-row">
+      <div><b>Storm Path</b><span>Navigation × weather. Live NWS radar. Live device GPS. Intel and plans on this device.</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════════════════
      SHARED BOTTOM BAR
      ════════════════════════════════════════════════ -->
@@ -3084,7 +3390,7 @@ body {
   </div>
   <div class="sp-search-field">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-    <input id="sp-search-input" type="text" placeholder="Address, place, or landmark" autocomplete="off" autocapitalize="off" spellcheck="false" />
+    <input id="sp-search-input" type="text" placeholder="Town, state, or full US address" autocomplete="off" autocapitalize="off" spellcheck="false" />
     <button type="button" class="sp-search-clear" id="sp-search-clear">CLEAR</button>
   </div>
   <div class="sp-chip-row">
@@ -3104,7 +3410,10 @@ body {
       <button type="button" id="sp-save-home">SAVE AS HOME</button>
       <button type="button" id="sp-save-work">SAVE AS WORK</button>
     </div>
-    <button type="button" class="sp-go-btn" id="sp-go-btn">GO</button>
+    <div class="sp-go-row">
+      <button type="button" class="sp-go-btn" id="sp-go-btn">START DRIVE</button>
+      <button type="button" class="sp-go-btn later" id="sp-go-later">DRIVE LATER</button>
+    </div>
   </div>
 </div>
 
@@ -3128,6 +3437,7 @@ body {
     <button type="button" class="sp-intel-tile" data-type="pothole"><span class="sp-intel-ico"><img src="intel/pothole.png" width="80" height="56" alt=""></span><span class="t">SURFACE</span><span class="d">Pothole or damage</span></button>
   </div>
   <div id="sp-subtype-row" class="sp-subtype-row"></div>
+  <textarea id="sp-intel-note-field" class="sp-note-field" maxlength="140" placeholder="Optional note — shows on the pin (140 chars)"></textarea>
   <button type="button" class="sp-post-intel" id="sp-post-intel">POST INTEL</button>
   <div class="sp-intel-note">Drops a pin at your live GPS fix (or map center if GPS is still acquiring). Stored on this device for 3 hours. Fleet-wide share across other phones is the next layer — the board is already built for it.</div>
 </div>
@@ -3147,6 +3457,27 @@ body {
   <div id="sp-vehicle-sections"></div>
   <div class="sp-veh-note" id="sp-veh-note">Tap a pack — its four markers pop up. Tap one and it stays on your GPS path.</div>
 </div>
+
+<div id="sp-later-sheet" class="sp-sheet" role="dialog" aria-label="Drive later">
+  <div class="sp-sheet-handle"></div>
+  <div class="sp-sheet-head">
+    <div>
+      <div class="sp-sheet-kicker">DRIVE LATER</div>
+      <div class="sp-sheet-title">Pick when you leave</div>
+    </div>
+    <button type="button" class="sp-sheet-close" data-close-sheet aria-label="Close">×</button>
+  </div>
+  <div class="later-presets">
+    <button type="button" data-later="today3">LATER TODAY</button>
+    <button type="button" data-later="tonight">TONIGHT 7PM</button>
+    <button type="button" data-later="tomorrow">TOMORROW 8AM</button>
+    <button type="button" data-later="week">NEXT WEEK</button>
+    <button type="button" data-later="month">NEXT MONTH</button>
+  </div>
+  <input id="sp-later-when" type="datetime-local">
+  <button type="button" class="sp-go-btn" id="sp-later-save" style="margin-top:12px;">SAVE PLAN</button>
+</div>
+
 <div id="sp-toast" class="sp-toast" role="status"></div>
 
 <script>
@@ -3193,14 +3524,20 @@ let animFrame = null;
 // Removes .active from every .sp-screen before adding to exactly one.
 // Updates activeScreen only after the target is validated.
 // spSetState() does NOT call this; screen visibility is owned here exclusively.
-const SP_VALID_SCREENS = ['driver', 'map', 'weather'];
+const SP_VALID_SCREENS = ['driver', 'map', 'weather', 'settings'];
 
 function switchScreen(name) {
   if (!SP_VALID_SCREENS.includes(name)) {
     console.error('StormPath switchScreen: invalid screen name "' + name + '" — current screen preserved.');
     return;
   }
-  if (activeScreen === name) return;
+  try { if (typeof spCloseSheets === 'function') spCloseSheets(); } catch (e) {}
+  if (activeScreen === name) {
+    if (name === 'map') {
+      requestAnimationFrame(() => { try { spEnsureLeaflet(); spLeaflet && spLeaflet.invalidateSize(); } catch (e) {} });
+    }
+    return;
+  }
 
   // Cancel any running animation loop before any DOM change
   if (animFrame !== null) {
@@ -3628,22 +3965,9 @@ function spStartRadarRefresh() {
 }
 
 // ────────────────────────────────────────────────
-//  SPEED SIMULATION
+//  SPEED — live GPS only (no simulation)
 // ────────────────────────────────────────────────
-let simSpeed = 38;
-let speedTimer = 0;
-
-function updateSpeed(t) {
-  if (t - speedTimer > 2000) {
-    speedTimer = t;
-    simSpeed = Math.max(0, Math.min(65, simSpeed + (Math.random()-0.5)*10));
-    const el = document.getElementById('speed-display');
-    if (el) {
-      el.textContent = Math.round(simSpeed);
-      el.style.color = simSpeed > 45 * 1.1 ? 'var(--red-alert)' : 'var(--amber)';
-    }
-  }
-}
+function updateSpeed() { spPaintSpeed(); }
 
 // ────────────────────────────────────────────────
 //  ANIMATION LOOPS — ONE AT A TIME
@@ -3657,7 +3981,6 @@ function startLoop() {
     if (activeScreen !== 'map') { animFrame = null; return; }
     try {
       drawMap();
-      updateSpeed(timestamp);
     } catch (error) {
       // PATCH: replaced empty catch — surface the true error
       console.error('StormPath Runtime Error [MAP loop]:', error);
@@ -4293,7 +4616,7 @@ function runStartupSafetyChecks() {
 //  routes into the SAFE MODE pattern instead of crashing or
 //  silently keeping the fake coordinates.
 // ────────────────────────────────────────────────
-let spCoords = { lat: null, lon: null, accuracy: null };
+let spCoords = { lat: null, lon: null, accuracy: null, speedMps: null, heading: null };
 let spGPSAvailable = false;
 let spGPSWatchId = null;
 
@@ -4348,9 +4671,16 @@ function spOnPositionSuccess(pos) {
   spCoords.lat = pos.coords.latitude;
   spCoords.lon = pos.coords.longitude;
   spCoords.accuracy = pos.coords.accuracy;
+  spCoords.speedMps = (typeof pos.coords.speed === 'number' && isFinite(pos.coords.speed) && pos.coords.speed >= 0)
+    ? pos.coords.speed
+    : (spCoords.speedMps == null ? 0 : spCoords.speedMps);
+  spCoords.heading = (typeof pos.coords.heading === 'number') ? pos.coords.heading : spCoords.heading;
   spGPSAvailable = true;
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
   spUpdateCoordsDisplay();
+  spPaintSpeed();
+  spTickTrip();
+  spMaybeSpeedLimit();
   if (activeScreen === 'map') drawMap();
   spRecomputeState();
   // Weather and radar imagery are only ever fetched once a real GPS fix
@@ -4591,12 +4921,35 @@ async function spFetchWeather(lat, lon) {
 // ────────────────────────────────────────────────
 const SP_PHOTON = 'https://photon.komoot.io/api/';
 const SP_PHOTON_REV = 'https://photon.komoot.io/reverse';
+const SP_NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const SP_OPENMETEO = 'https://geocoding-api.open-meteo.com/v1/search';
 const SP_OSRM = 'https://router.project-osrm.org/route/v1/driving/';
 const SP_LS_RECENTS = 'sp.recents.v1';
 const SP_LS_SAVED = 'sp.saved.v1';
 const SP_LS_INTEL = 'sp.intel.v1';
 const SP_INTEL_TTL_MS = 3 * 60 * 60 * 1000;
 const SP_LS_VEHICLE = 'sp.vehicle.v1';
+const SP_LS_PLANS = 'sp.plans.v1';
+const SP_LS_SET = 'sp.settings.v1';
+const SP_US_STATES = [
+  ['AL','Alabama',32.318, -86.902], ['AK','Alaska',64.200, -153.494], ['AZ','Arizona',34.049, -111.094],
+  ['AR','Arkansas',34.746, -92.290], ['CA','California',36.778, -119.418], ['CO','Colorado',39.550, -105.782],
+  ['CT','Connecticut',41.603, -73.088], ['DE','Delaware',38.911, -75.528], ['DC','District of Columbia',38.907, -77.037],
+  ['FL','Florida',27.665, -81.516], ['GA','Georgia',32.165, -82.900], ['HI','Hawaii',19.897, -155.583],
+  ['ID','Idaho',44.068, -114.742], ['IL','Illinois',40.633, -89.399], ['IN','Indiana',40.267, -86.135],
+  ['IA','Iowa',41.878, -93.098], ['KS','Kansas',39.012, -98.484], ['KY','Kentucky',37.839, -84.270],
+  ['LA','Louisiana',30.984, -91.962], ['ME','Maine',45.253, -69.445], ['MD','Maryland',39.046, -76.641],
+  ['MA','Massachusetts',42.407, -71.382], ['MI','Michigan',44.315, -85.602], ['MN','Minnesota',46.730, -94.686],
+  ['MS','Mississippi',32.355, -89.399], ['MO','Missouri',38.574, -92.603], ['MT','Montana',46.880, -110.363],
+  ['NE','Nebraska',41.492, -99.902], ['NV','Nevada',38.803, -116.419], ['NH','New Hampshire',43.194, -71.572],
+  ['NJ','New Jersey',40.058, -74.406], ['NM','New Mexico',34.520, -105.870], ['NY','New York',43.000, -75.000],
+  ['NC','North Carolina',35.760, -79.019], ['ND','North Dakota',47.551, -101.002], ['OH','Ohio',40.417, -82.907],
+  ['OK','Oklahoma',35.008, -97.093], ['OR','Oregon',43.804, -120.554], ['PA','Pennsylvania',41.203, -77.195],
+  ['RI','Rhode Island',41.580, -71.477], ['SC','South Carolina',33.836, -81.164], ['SD','South Dakota',43.969, -99.901],
+  ['TN','Tennessee',35.517, -86.580], ['TX','Texas',31.968, -99.902], ['UT','Utah',39.321, -111.094],
+  ['VT','Vermont',44.559, -72.578], ['VA','Virginia',37.432, -78.657], ['WA','Washington',47.751, -120.740],
+  ['WV','West Virginia',38.598, -80.455], ['WI','Wisconsin',43.784, -88.788], ['WY','Wyoming',43.076, -107.290]
+];
 
 const SP_VEHICLE_SECTIONS = [
   {
@@ -4712,11 +5065,18 @@ let spIntelLayer = null;
 let spSearchTimer = null;
 let spSearchAbort = null;
 let spDidFlyToGps = false;
+let spFollowGps = true;
 let spDestination = null;
 let spIntelPick = { type: null, subtype: null };
 let spPendingPlace = null;
 let spRadarMoveTimer = null;
 let spVehicleView = null;
+let spNavActive = false;
+let spRouteMeta = { distance: 0, duration: 0, coords: [] };
+let spSpeedLimitMph = null;
+let spLimitTimer = 0;
+let spLabelLayer = null;
+let spArrivalAt = 0;
 
 function spIconSvg() {
   return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>';
@@ -4789,14 +5149,24 @@ function spEnsureLeaflet() {
     zoomSnap: 0.5
   }).setView([bias.lat, bias.lon], 13);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO',
     subdomains: 'abcd',
     maxZoom: 19
   }).addTo(spLeaflet);
+  spLeaflet.createPane('labels');
+  spLeaflet.getPane('labels').style.zIndex = 450;
+  spLeaflet.getPane('labels').style.pointerEvents = 'none';
+  spLabelLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+    pane: 'labels',
+    subdomains: 'abcd',
+    maxZoom: 19
+  });
+  if (spGetSet().labels !== false) spLabelLayer.addTo(spLeaflet);
 
   spIntelLayer = L.layerGroup().addTo(spLeaflet);
 
+  spLeaflet.on('dragstart', () => { spFollowGps = false; });
   spLeaflet.on('moveend', () => {
     clearTimeout(spRadarMoveTimer);
     spRadarMoveTimer = setTimeout(spRefreshLeafletRadar, 450);
@@ -4820,8 +5190,11 @@ function spSyncLiveMap() {
   }
   if (!spDidFlyToGps) {
     spDidFlyToGps = true;
+    spFollowGps = true;
     spLeaflet.setView(latlng, 14, { animate: true });
     spRefreshLeafletRadar();
+  } else if (spNavActive && spFollowGps) {
+    spLeaflet.panTo(latlng, { animate: true, duration: 0.35 });
   }
 }
 
@@ -4869,6 +5242,8 @@ function spCloseSheets() {
 }
 
 function spPlaceLabel(p) {
+  if (p.name && p.city && p.state && p.name !== p.city) return p.name + ', ' + p.city + ', ' + p.state;
+  if (p.name && p.state) return p.name + ', ' + p.state;
   return p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || 'Selected place';
 }
 function spPlaceSub(p) {
@@ -4876,16 +5251,40 @@ function spPlaceSub(p) {
     .filter(Boolean).join(', ');
 }
 
+function spIsUsPlace(p) {
+  const c = String(p.country || '').toUpperCase();
+  if (!c) return true;
+  return c === 'US' || c === 'USA' || c.indexOf('UNITED STATES') >= 0;
+}
+function spStateHits(q) {
+  const s = q.trim().toLowerCase();
+  if (s.length < 2) return [];
+  return SP_US_STATES.filter(([ab, name]) => {
+    const a = ab.toLowerCase();
+    const n = name.toLowerCase();
+    return s === a || n === s || (s.length >= 3 && n.startsWith(s));
+  }).slice(0, 3).map(([ab, name, lat, lon]) => ({
+    name: name, housenumber: null, street: null, city: null, state: ab,
+    country: 'United States', osm_value: 'state', lat: lat, lon: lon
+  }));
+}
+
 async function spPhotonSearch(q) {
   const bias = spBias();
-  const url = SP_PHOTON + '?q=' + encodeURIComponent(q) +
-    '&lat=' + bias.lat + '&lon=' + bias.lon + '&limit=8&lang=en';
   if (spSearchAbort) spSearchAbort.abort();
   spSearchAbort = new AbortController();
-  const res = await fetch(url, { signal: spSearchAbort.signal });
-  if (!res.ok) throw new Error('search HTTP ' + res.status);
-  const json = await res.json();
-  return (json.features || []).map(f => {
+  const sig = spSearchAbort.signal;
+  const photonUrl = SP_PHOTON + '?q=' + encodeURIComponent(q) +
+    '&lat=' + bias.lat + '&lon=' + bias.lon + '&limit=8&lang=en';
+  const nomUrl = SP_NOMINATIM + '?format=jsonv2&addressdetails=1&countrycodes=us&dedupe=1&limit=8&q=' + encodeURIComponent(q);
+  const omUrl = SP_OPENMETEO + '?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json&countryCode=US';
+  const tasks = [
+    fetch(photonUrl, { signal: sig }).then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
+    fetch(nomUrl, { headers: { 'Accept': 'application/json', 'Accept-Language': 'en-US' }, signal: sig }).then(r => r.ok ? r.json() : []).catch(() => []),
+    fetch(omUrl, { signal: sig }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  ];
+  const [photonJson, nomJson, omJson] = await Promise.all(tasks);
+  const photon = ((photonJson && photonJson.features) || []).map(f => {
     const p = f.properties || {};
     const c = (f.geometry && f.geometry.coordinates) || [0, 0];
     return {
@@ -4894,10 +5293,49 @@ async function spPhotonSearch(q) {
       street: p.street || null,
       city: p.city || p.county || null,
       state: p.state || null,
+      country: p.country || p.countrycode || '',
       osm_value: p.osm_value || '',
       lon: c[0], lat: c[1]
     };
   });
+  const extra = (Array.isArray(nomJson) ? nomJson : []).map(r => {
+    const a = r.address || {};
+    return {
+      name: r.name || a.city || a.town || a.village || a.hamlet || a.county || r.display_name,
+      housenumber: a.house_number || null,
+      street: a.road || null,
+      city: a.city || a.town || a.village || a.hamlet || null,
+      state: a.state || null,
+      country: 'United States',
+      osm_value: r.type || a.addresstype || '',
+      lon: parseFloat(r.lon), lat: parseFloat(r.lat)
+    };
+  });
+  const om = ((omJson && omJson.results) || []).map(r => ({
+    name: r.name || null,
+    housenumber: null,
+    street: null,
+    city: r.name || null,
+    state: r.admin1 || null,
+    country: r.country_code === 'US' ? 'United States' : (r.country || r.country_code || ''),
+    osm_value: r.feature_code || 'place',
+    lon: r.longitude, lat: r.latitude
+  }));
+  const seen = {};
+  const merged = [];
+  function push(p) {
+    if (!p || !isFinite(p.lat) || !isFinite(p.lon)) return;
+    if (!spIsUsPlace(p)) return;
+    const k = p.lat.toFixed(3) + ',' + p.lon.toFixed(3);
+    if (seen[k]) return;
+    seen[k] = 1;
+    merged.push(p);
+  }
+  spStateHits(q).forEach(push);
+  extra.forEach(push);
+  om.forEach(push);
+  photon.forEach(push);
+  return merged.slice(0, 10);
 }
 
 function spRenderResults(places, mode) {
@@ -4907,7 +5345,7 @@ function spRenderResults(places, mode) {
   if (!list) return;
   if (!places.length) {
     list.innerHTML = '<div class="sp-empty-hint">' + (mode === 'empty'
-      ? 'Type an address, business, or landmark. Results bias to your GPS fix.'
+      ? 'Type a US town, state, or full address. Results cover the entire United States.'
       : 'No matches. Try a street name or city.') + '</div>';
     return;
   }
@@ -4956,7 +5394,13 @@ function spRecentRowHtml(tag, p, key) {
     '</div><div class="sp-result-sub">' + spEsc(spPlaceSub(p)) + '</div></div></button>';
 }
 function spEsc(s) {
-  return String(s || '').replace(/[&<>"']/g, ch => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[ch]));
+  return String(s || '').replace(/[&<>"']/g, ch => ({
+    '&': '&',
+    '<': '<',
+    '>': '>',
+    '"': '"',
+    "'": '&#39;'
+  }[ch]));
 }
 
 function spOnSearchInput() {
@@ -5016,20 +5460,18 @@ async function spGoDestination() {
   const place = spPendingPlace;
   const btn = document.getElementById('sp-go-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'BUILDING ROUTE…'; }
+  spCloseSheets();
+  if (typeof switchScreen === 'function') switchScreen('map');
+  spEnsureLeaflet();
   try {
     await spCommitDestination(place);
-    spCloseSheets();
-    if (typeof switchScreen === 'function') switchScreen('map');
-    spEnsureLeaflet();
-    spToast('ROUTE SET · ' + spPlaceLabel(place).toUpperCase());
+    spToast('DRIVE STARTED · ' + spPlaceLabel(place).toUpperCase());
   } catch (e) {
     console.warn('StormPath route failed', e);
     spToast('DESTINATION SET · ROUTE UNAVAILABLE');
     spCommitDestination(place, true);
-    spCloseSheets();
-    if (typeof switchScreen === 'function') switchScreen('map');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'GO'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'START DRIVE'; }
   }
 }
 
@@ -5155,6 +5597,16 @@ async function spRouteTo(place) {
   const steps = ((route.legs || [])[0] || {}).steps || [];
   spFillTurns(steps, null);
   spUpdateNextTurn(steps[0] || null, steps[1] || null);
+  spRouteMeta = {
+    distance: route.distance || 0,
+    duration: route.duration || 0,
+    coords: (route.geometry && route.geometry.coordinates) || []
+  };
+  spNavActive = true;
+  spFollowGps = true;
+  document.getElementById('nextturn-hud')?.classList.add('is-nav');
+  document.getElementById('sp-end-drive')?.classList.add('show');
+  spTickTrip();
 }
 
 function spManeuverGlyph(step) {
@@ -5228,6 +5680,8 @@ function spOpenIntel() {
   document.querySelectorAll('.sp-intel-tile').forEach(t => t.classList.remove('selected'));
   const sub = document.getElementById('sp-subtype-row');
   if (sub) { sub.className = 'sp-subtype-row'; sub.innerHTML = ''; }
+  const noteEl = document.getElementById('sp-intel-note-field');
+  if (noteEl) noteEl.value = '';
   document.getElementById('sp-post-intel')?.classList.remove('show');
   spOpenSheet('sp-intel-sheet');
 }
@@ -5279,6 +5733,7 @@ function spPostIntel() {
     type: spIntelPick.type,
     subtype: spIntelPick.subtype,
     label: spec.label + (spIntelPick.subtype ? ' · ' + spIntelPick.subtype.replace(/_/g, ' ').toUpperCase() : ''),
+    note: (document.getElementById('sp-intel-note-field')?.value || '').trim().slice(0, 140),
     color: spec.color,
     lat: lat,
     lon: lon,
@@ -5334,10 +5789,19 @@ function spRenderIntelMarkers() {
   if (!spIntelLayer) return;
   spIntelLayer.clearLayers();
   spPruneIntel(spLsRead(SP_LS_INTEL, [])).forEach(i => {
-    L.marker([i.lat, i.lon], { icon: spIntelMapIcon(i), title: i.label })
-      .bindPopup('<div style="font-family:Courier New,monospace;font-size:11px;letter-spacing:1px;">' +
-        spEsc(i.label) + '</div>')
-      .addTo(spIntelLayer);
+    const note = i.note ? '<div style="margin-top:6px;color:#9ad;">' + spEsc(i.note) + '</div>' : '';
+    const mk = L.marker([i.lat, i.lon], { icon: spIntelMapIcon(i), title: i.label })
+      .bindPopup(
+        '<div style="font-family:Courier New,monospace;font-size:11px;letter-spacing:1px;min-width:140px;">' +
+          '<div>' + spEsc(i.label) + '</div>' + note +
+          '<button type="button" class="sp-intel-del" data-del="' + i.id + '" style="margin-top:8px;">DELETE</button>' +
+        '</div>'
+      );
+    mk.on('popupopen', () => {
+      const btn = document.querySelector('.leaflet-popup-content [data-del="' + i.id + '"]');
+      if (btn) btn.addEventListener('click', () => spDeleteIntel(i.id));
+    });
+    mk.addTo(spIntelLayer);
   });
 }
 
@@ -5354,15 +5818,313 @@ function spRenderIntelHazards() {
     const thumb = photo
       ? '<img class="sp-hazard-photo" src="' + photo.url + '" width="40" height="32" alt="">'
       : '<div class="hazard-sev med"></div>';
-    return '<div class="hazard-item">' + thumb + '<div>' +
-      '<div class="hazard-name"></div><div class="hazard-desc"></div></div></div>';
+    return '<div class="hazard-item">' + thumb + '<div style="flex:1;min-width:0;">' +
+      '<div class="hazard-name"></div><div class="hazard-desc"></div></div>' +
+      '<button type="button" class="sp-intel-del" data-del="' + i.id + '">DELETE</button></div>';
   }).join('');
   host.querySelectorAll('.hazard-item').forEach((el, idx) => {
     const i = items[idx];
     const age = Math.max(1, Math.round((Date.now() - i.ts) / 60000));
     el.querySelector('.hazard-name').textContent = i.label;
-    el.querySelector('.hazard-desc').textContent = age + ' min ago · ' + i.lat.toFixed(4) + ', ' + i.lon.toFixed(4);
+    el.querySelector('.hazard-desc').textContent = (i.note ? i.note + ' · ' : '') + age + ' min ago';
   });
+  host.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      spDeleteIntel(btn.getAttribute('data-del'));
+    });
+  });
+}
+
+function spGetSet() {
+  return Object.assign({ units: 'mph', limit: true, labels: true }, spLsRead(SP_LS_SET, {}) || {});
+}
+function spPutSet(next) {
+  spLsWrite(SP_LS_SET, Object.assign(spGetSet(), next));
+  spPaintSettings();
+  spPaintSpeed();
+}
+
+function spSpeedMph() {
+  const s = spCoords.speedMps;
+  if (s == null || !isFinite(s) || s < 0) return 0;
+  return s * 2.236936292;
+}
+function spUseMetric() { return spGetSet().units === 'kmh'; }
+function spPaintSpeed() {
+  const mph = spSpeedMph();
+  const metric = spUseMetric();
+  const shown = metric ? mph * 1.60934 : mph;
+  const unit = metric ? 'KM/H' : 'MPH';
+  const el = document.getElementById('speed-display');
+  const un = document.getElementById('speed-unit');
+  const lim = document.getElementById('speed-limit');
+  const live = document.getElementById('speed-live');
+  if (un) un.textContent = unit;
+  if (el) {
+    el.textContent = spGPSAvailable ? String(Math.round(shown)) : '--';
+    const cap = spSpeedLimitMph;
+    el.style.color = (cap && mph > cap * 1.08) ? 'var(--red-alert)' : 'var(--amber)';
+  }
+  if (live) live.textContent = spGPSAvailable ? 'GPS SPEED' : 'WAITING';
+  if (lim) {
+    lim.style.display = spGetSet().limit === false ? 'none' : 'flex';
+    if (spSpeedLimitMph == null) lim.textContent = '--';
+    else lim.textContent = String(Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph));
+  }
+  const tripSpd = document.getElementById('sp-trip-spd');
+  const tripLim = document.getElementById('sp-trip-lim');
+  if (tripSpd) tripSpd.textContent = (spGPSAvailable ? Math.round(shown) : 0) + ' ' + unit;
+  if (tripLim) tripLim.textContent = spSpeedLimitMph == null ? '--' : (Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph) + ' ' + unit);
+}
+
+function spMaybeSpeedLimit() {
+  if (!(spGPSAvailable && spCoords.lat != null)) return;
+  const now = Date.now();
+  if (now - spLimitTimer < 25000) return;
+  spLimitTimer = now;
+  const q = '[out:json][timeout:8];way(around:35,' + spCoords.lat + ',' + spCoords.lon + ')[maxspeed];out tags 4;';
+  fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: 'data=' + encodeURIComponent(q),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }
+  }).then(r => r.ok ? r.json() : null).then(json => {
+    const els = (json && json.elements) || [];
+    for (let i = 0; i < els.length; i++) {
+      const raw = els[i].tags && els[i].tags.maxspeed;
+      const n = spParseMaxspeed(raw);
+      if (n != null) { spSpeedLimitMph = n; spPaintSpeed(); return; }
+    }
+  }).catch(() => {});
+}
+function spParseMaxspeed(raw) {
+  if (!raw) return null;
+  const s = String(raw).toLowerCase();
+  const n = parseFloat(s);
+  if (!isFinite(n) || n <= 0) return null;
+  if (s.indexOf('km') >= 0) return n * 0.621371;
+  return n;
+}
+
+function spRemainMeters() {
+  const coords = spRouteMeta.coords || [];
+  if (!coords.length) return spRouteMeta.distance || 0;
+  if (!(spGPSAvailable && spCoords.lat != null)) return spRouteMeta.distance || 0;
+  let best = 0, bestD = 1e15;
+  for (let i = 0; i < coords.length; i++) {
+    const d = Math.hypot(coords[i][1] - spCoords.lat, coords[i][0] - spCoords.lon);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  let m = 0;
+  for (let i = best; i < coords.length - 1; i++) {
+    m += spHaversineMi(coords[i][1], coords[i][0], coords[i + 1][1], coords[i + 1][0]) * 1609.344;
+  }
+  return m;
+}
+function spConstructionDelayS() {
+  const coords = spRouteMeta.coords || [];
+  if (!coords.length) return 0;
+  let extra = 0;
+  spPruneIntel(spLsRead(SP_LS_INTEL, [])).forEach(i => {
+    if (i.type !== 'construction' && i.type !== 'closure') return;
+    let near = false;
+    for (let k = 0; k < coords.length; k += 8) {
+      const mi = spHaversineMi(i.lat, i.lon, coords[k][1], coords[k][0]);
+      if (mi < 0.35) { near = true; break; }
+    }
+    if (near) extra += (i.type === 'closure' ? 8 : 4) * 60;
+  });
+  return extra;
+}
+function spFmtClock(totalS) {
+  totalS = Math.max(0, Math.round(totalS));
+  const d = Math.floor(totalS / 86400);
+  const h = Math.floor((totalS % 86400) / 3600);
+  const m = Math.floor((totalS % 3600) / 60);
+  const s = totalS % 60;
+  return { d: d, h: h, m: m, s: s };
+}
+function spTickTrip() {
+  spPaintSpeed();
+  const dEl = document.getElementById('sp-eta-d');
+  if (!dEl) return;
+  if (!spNavActive || !spDestination) {
+    spArrivalAt = 0;
+    dEl.textContent = '0';
+    document.getElementById('sp-eta-h').textContent = '0';
+    document.getElementById('sp-eta-m').textContent = '0';
+    document.getElementById('sp-eta-s').textContent = '0';
+    const rm = document.getElementById('sp-remain-mi');
+    if (rm) rm.textContent = '--';
+    const delay = document.getElementById('sp-trip-delay');
+    if (delay) delay.textContent = '0 MIN';
+    const eta = document.getElementById('eta-val');
+    if (eta) eta.textContent = '--';
+    return;
+  }
+  const remainM = spRemainMeters();
+  const delayS = spConstructionDelayS();
+  const mph = spSpeedMph();
+  let remainS;
+  if (mph >= 3.5) remainS = (remainM / 1609.344) / mph * 3600 + delayS;
+  else {
+    const frac = spRouteMeta.distance ? remainM / spRouteMeta.distance : 1;
+    remainS = (spRouteMeta.duration || 0) * frac + delayS;
+  }
+  const miles = remainM / 1609.344;
+  const rm = document.getElementById('sp-remain-mi');
+  if (rm) rm.textContent = miles.toFixed(1);
+  const delay = document.getElementById('sp-trip-delay');
+  if (delay) delay.textContent = Math.round(delayS / 60) + ' MIN';
+  const now = Date.now();
+  const shown = spArrivalAt ? (spArrivalAt - now) / 1000 : remainS;
+  if (!spArrivalAt || Math.abs(shown - remainS) > 8) spArrivalAt = now + remainS * 1000;
+  const clock = spFmtClock((spArrivalAt - now) / 1000);
+  document.getElementById('sp-eta-d').textContent = String(clock.d);
+  document.getElementById('sp-eta-h').textContent = String(clock.h);
+  document.getElementById('sp-eta-m').textContent = String(clock.m);
+  document.getElementById('sp-eta-s').textContent = String(clock.s);
+  const eta = document.getElementById('eta-val');
+  if (eta) eta.textContent = clock.d ? (clock.d + 'd ' + clock.h + 'h') : (clock.h ? (clock.h + 'h ' + clock.m) : String(clock.m));
+  const dist = document.getElementById('dist-val');
+  if (dist) dist.textContent = miles.toFixed(1);
+}
+
+function spEndDrive() {
+  spNavActive = false;
+  spDestination = null;
+  spArrivalAt = 0;
+  spRouteMeta = { distance: 0, duration: 0, coords: [] };
+  document.getElementById('nextturn-hud')?.classList.remove('is-nav');
+  document.getElementById('sp-end-drive')?.classList.remove('show');
+  if (spRouteLine) { spRouteLine.remove(); spRouteLine = null; }
+  if (spDestMarker) { spDestMarker.remove(); spDestMarker = null; }
+  document.querySelectorAll('.sp-search-dest').forEach(el => {
+    el.textContent = 'Town, state, or address';
+    el.classList.add('is-empty');
+  });
+  const to = document.getElementById('sp-to-name');
+  if (to) to.textContent = 'Set a destination';
+  spFillTurns([], 'Set a destination to load live turn-by-turn.');
+  spUpdateNextTurn(null);
+  spTickTrip();
+  spToast('DRIVE ENDED');
+}
+
+function spDeleteIntel(id) {
+  const next = spPruneIntel(spLsRead(SP_LS_INTEL, [])).filter(i => i.id !== id);
+  spLsWrite(SP_LS_INTEL, next);
+  spRenderIntelMarkers();
+  spRenderIntelHazards();
+  spTickTrip();
+  spToast('INTEL DELETED');
+}
+
+function spRecenter() {
+  spEnsureLeaflet();
+  if (!spLeaflet) return;
+  spFollowGps = true;
+  if (spGPSAvailable && spCoords.lat != null) {
+    spLeaflet.setView([spCoords.lat, spCoords.lon], Math.max(spLeaflet.getZoom(), 14), { animate: true });
+  }
+}
+
+function spRenderPlans() {
+  const host = document.getElementById('sp-plan-list');
+  if (!host) return;
+  const plans = (spLsRead(SP_LS_PLANS, []) || []).filter(p => p && p.when > Date.now() - 3600000);
+  if (!plans.length) {
+    host.innerHTML = '<div class="hazard-desc" style="padding:8px 0;color:var(--text-secondary)">No planned drives. Search a place, then Drive Later.</div>';
+    return;
+  }
+  host.innerHTML = plans.map(p =>
+    '<div class="sp-plan-item"><div style="flex:1;min-width:0;"><div class="hazard-name"></div><div class="hazard-desc"></div></div>' +
+    '<button type="button" class="sp-plan-go" data-start="' + p.id + '">START</button>' +
+    '<button type="button" class="sp-plan-del" data-plan="' + p.id + '">DELETE</button></div>'
+  ).join('');
+  host.querySelectorAll('.sp-plan-item').forEach((el, idx) => {
+    const p = plans[idx];
+    el.querySelector('.hazard-name').textContent = spPlaceLabel(p.place);
+    el.querySelector('.hazard-desc').textContent = new Date(p.when).toLocaleString();
+  });
+  host.querySelectorAll('[data-start]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = (spLsRead(SP_LS_PLANS, []) || []).find(x => x.id === btn.getAttribute('data-start'));
+      if (!p || !p.place) return;
+      spPendingPlace = p.place;
+      spGoDestination();
+    });
+  });
+  host.querySelectorAll('[data-plan]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const next = (spLsRead(SP_LS_PLANS, []) || []).filter(p => p.id !== btn.getAttribute('data-plan'));
+      spLsWrite(SP_LS_PLANS, next);
+      spRenderPlans();
+      spToast('PLAN DELETED');
+    });
+  });
+}
+function spOpenLater() {
+  if (!spPendingPlace) { spToast('PICK A PLACE FIRST'); return; }
+  const input = document.getElementById('sp-later-when');
+  if (input) {
+    const d = new Date(Date.now() + 3 * 3600000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    input.value = d.toISOString().slice(0, 16);
+  }
+  spOpenSheet('sp-later-sheet');
+}
+function spApplyLaterPreset(kind) {
+  const d = new Date();
+  if (kind === 'today3') d.setHours(d.getHours() + 3);
+  else if (kind === 'tonight') { d.setHours(19, 0, 0, 0); if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1); }
+  else if (kind === 'tomorrow') { d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); }
+  else if (kind === 'week') { d.setDate(d.getDate() + 7); d.setHours(8, 0, 0, 0); }
+  else if (kind === 'month') { d.setMonth(d.getMonth() + 1); d.setHours(8, 0, 0, 0); }
+  const input = document.getElementById('sp-later-when');
+  if (input) {
+    const x = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    input.value = x.toISOString().slice(0, 16);
+  }
+}
+function spSavePlan() {
+  if (!spPendingPlace) return;
+  const input = document.getElementById('sp-later-when');
+  const when = input && input.value ? new Date(input.value).getTime() : NaN;
+  if (!isFinite(when) || when < Date.now() - 60000) {
+    spToast('PICK A FUTURE TIME');
+    return;
+  }
+  const plans = spLsRead(SP_LS_PLANS, []) || [];
+  plans.unshift({ id: 'p' + Date.now(), place: spPendingPlace, when: when });
+  spLsWrite(SP_LS_PLANS, plans.slice(0, 20));
+  spRenderPlans();
+  spCloseSheets();
+  spToast('DRIVE SAVED · ' + new Date(when).toLocaleString());
+  if (typeof switchScreen === 'function') switchScreen('driver');
+}
+
+function spPaintSettings() {
+  const s = spGetSet();
+  const u = document.getElementById('sp-set-units');
+  const l = document.getElementById('sp-set-limit');
+  const g = document.getElementById('sp-set-labels');
+  if (u) u.textContent = s.units === 'kmh' ? 'KM/H' : 'MPH';
+  if (l) l.textContent = s.limit === false ? 'OFF' : 'ON';
+  if (g) g.textContent = s.labels === false ? 'OFF' : 'ON';
+}
+function spToggleLabels() {
+  const currentlyOn = spGetSet().labels !== false;
+  spPutSet({ labels: !currentlyOn });
+  if (!spLeaflet || !spLabelLayer) return;
+  if (!currentlyOn) spLabelLayer.addTo(spLeaflet);
+  else if (spLeaflet.hasLayer(spLabelLayer)) spLeaflet.removeLayer(spLabelLayer);
+}
+
+function spMountTripBoard() {
+  const panel = document.querySelector('#screen-map .left-panel');
+  const host = document.getElementById('sp-route-host') || document.getElementById('sp-driver-trip');
+  if (panel && host && panel.parentElement !== host) host.appendChild(panel);
 }
 
 function spFindVehicle(id) {
@@ -5537,6 +6299,32 @@ function spBindNavUi() {
     spPendingPlace = null;
   });
   document.getElementById('sp-go-btn')?.addEventListener('click', spGoDestination);
+  document.getElementById('sp-go-later')?.addEventListener('click', spOpenLater);
+  document.getElementById('sp-later-save')?.addEventListener('click', spSavePlan);
+  document.querySelectorAll('[data-later]').forEach(btn => {
+    btn.addEventListener('click', () => spApplyLaterPreset(btn.getAttribute('data-later')));
+  });
+  document.getElementById('sp-end-drive')?.addEventListener('click', spEndDrive);
+  document.getElementById('sp-locate')?.addEventListener('click', spRecenter);
+  document.getElementById('sp-set-units')?.addEventListener('click', () => {
+    spPutSet({ units: spUseMetric() ? 'mph' : 'kmh' });
+  });
+  document.getElementById('sp-set-limit')?.addEventListener('click', () => {
+    spPutSet({ limit: spGetSet().limit === false });
+  });
+  document.getElementById('sp-set-labels')?.addEventListener('click', spToggleLabels);
+  document.getElementById('sp-set-recents')?.addEventListener('click', () => {
+    spLsWrite(SP_LS_RECENTS, []); spToast('RECENTS CLEARED');
+  });
+  document.getElementById('sp-set-intel')?.addEventListener('click', () => {
+    spLsWrite(SP_LS_INTEL, []); spRenderIntelMarkers(); spRenderIntelHazards(); spToast('INTEL CLEARED');
+  });
+  document.getElementById('sp-set-plans')?.addEventListener('click', () => {
+    spLsWrite(SP_LS_PLANS, []); spRenderPlans(); spToast('PLANS CLEARED');
+  });
+  document.getElementById('sp-set-saved')?.addEventListener('click', () => {
+    spLsWrite(SP_LS_SAVED, {}); spToast('HOME / WORK CLEARED');
+  });
   document.getElementById('sp-save-home')?.addEventListener('click', () => spSaveSlot('home'));
   document.getElementById('sp-save-work')?.addEventListener('click', () => spSaveSlot('work'));
   document.querySelectorAll('[data-chip]').forEach(btn => {
@@ -5574,10 +6362,15 @@ function spBindNavUi() {
 
 function spBootNav() {
   spBindNavUi();
+  spMountTripBoard();
   spRefreshVehicleButton();
   spRenderIntelHazards();
+  spRenderPlans();
+  spPaintSettings();
+  spPaintSpeed();
   spFillTurns([], 'Set a destination to load live turn-by-turn.');
   spUpdateNextTurn(null);
+  setInterval(spTickTrip, 1000);
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', spBootNav);
