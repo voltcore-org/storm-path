@@ -2030,6 +2030,102 @@ body {
     background: none !important;
     border: none !important;
   }
+  .sp-vehicle-wrap {
+    background: none !important;
+    border: none !important;
+  }
+  .sp-veh-rot {
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 88%;
+    will-change: transform;
+  }
+  .sp-veh-rot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.55));
+  }
+
+  .sp-now-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    margin: 4px 0 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    text-align: left;
+  }
+  .sp-now-card.is-idle { border-left-color: var(--border); opacity: 0.7; }
+  .sp-now-glyph {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.55rem;
+    color: var(--amber);
+    background: rgba(255,171,0,0.1);
+    border: 1px solid rgba(255,171,0,0.32);
+  }
+  .sp-now-dist {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+  }
+  .sp-now-street {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .sp-now-then {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 3px;
+  }
+
+  #sp-route-host .route-summary { display: none; }
+  #sp-route-host .panel-section { padding: 12px 0 4px; }
+  #sp-route-host .section-label { margin-bottom: 8px; }
+  #sp-route-host .turn-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--grid-line);
+    cursor: default;
+  }
+  #sp-route-host .turn-item:hover { background: transparent; }
+  #sp-route-host .turn-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+  }
+  #sp-route-host .turn-street {
+    white-space: normal;
+    font-size: 0.88rem;
+    line-height: 1.3;
+  }
+  #sp-route-host .turn-dist {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--cyan);
+    font-size: 0.72rem;
+    padding-top: 0;
+  }
+  #sp-route-host .turn-item.passed {
+    opacity: 0.38;
+  }
+  #sp-route-host .turn-item.passed .turn-street { color: var(--text-secondary); }
 
   .hud-nextturn { bottom: 128px; z-index: 12; }
   .hud-radar-time { bottom: 72px; right: 16px; z-index: 12; }
@@ -2830,6 +2926,14 @@ body {
         <span>DELAY <strong id="sp-trip-delay">0 MIN</strong></span>
       </div>
       <button type="button" class="sp-end-drive" id="sp-end-drive">END DRIVE</button>
+      <div id="sp-now-card" class="sp-now-card is-idle">
+        <div class="sp-now-glyph" id="sp-now-glyph">↑</div>
+        <div>
+          <div class="sp-now-dist" id="sp-now-dist">—</div>
+          <div class="sp-now-street" id="sp-now-street">Set a destination to load the route</div>
+          <div class="sp-now-then" id="sp-now-then">Search a town, state, or address, then Start Drive.</div>
+        </div>
+      </div>
       <div id="sp-route-host"></div>
       <div class="section-label">PLANNED DRIVES</div>
       <div id="sp-plan-list"></div>
@@ -5061,6 +5165,7 @@ let spLeaflet = null;
 let spGpsMarker = null;
 let spDestMarker = null;
 let spRouteLine = null;
+let spRouteGone = null;
 let spRadarOverlay = null;
 let spIntelLayer = null;
 let spSearchTimer = null;
@@ -5078,6 +5183,20 @@ let spSpeedLimitMph = null;
 let spLimitTimer = 0;
 let spLabelLayer = null;
 let spArrivalAt = 0;
+let spNavRaf = null;
+let spNav = {
+  pts: [],
+  meters: 0,
+  total: 0,
+  heading: 0,
+  mps: 0,
+  typicalMps: 13.4,
+  lastTs: 0,
+  lastPan: 0,
+  lastHud: 0,
+  steps: [],
+  arrived: false
+};
 
 function spIconSvg() {
   return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>';
@@ -5169,6 +5288,7 @@ function spEnsureLeaflet() {
 
   spLeaflet.on('dragstart', () => { spFollowGps = false; });
   spLeaflet.on('moveend', () => {
+    if (spNavActive && spFollowGps) return;
     clearTimeout(spRadarMoveTimer);
     spRadarMoveTimer = setTimeout(spRefreshLeafletRadar, 450);
   });
@@ -5180,12 +5300,234 @@ function spEnsureLeaflet() {
   return spLeaflet;
 }
 
+function spBearing(aLat, aLon, bLat, bLon) {
+  const p1 = aLat * Math.PI / 180, p2 = bLat * Math.PI / 180;
+  const dL = (bLon - aLon) * Math.PI / 180;
+  const y = Math.sin(dL) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dL);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function spBuildNavPath(coordsLonLat) {
+  const pts = [];
+  let cum = 0;
+  for (let i = 0; i < coordsLonLat.length; i++) {
+    const lon = coordsLonLat[i][0], lat = coordsLonLat[i][1];
+    if (i) cum += spHaversineMi(pts[i - 1].lat, pts[i - 1].lon, lat, lon) * 1609.344;
+    pts.push({ lat: lat, lon: lon, cum: cum });
+  }
+  return pts;
+}
+
+function spPointAt(meters) {
+  const pts = spNav.pts;
+  if (!pts.length) return null;
+  if (meters <= 0) {
+    const h = pts.length > 1 ? spBearing(pts[0].lat, pts[0].lon, pts[1].lat, pts[1].lon) : 0;
+    return { lat: pts[0].lat, lon: pts[0].lon, heading: h, idx: 0 };
+  }
+  const last = pts[pts.length - 1];
+  if (meters >= last.cum) {
+    const i = Math.max(0, pts.length - 2);
+    return { lat: last.lat, lon: last.lon, heading: spBearing(pts[i].lat, pts[i].lon, last.lat, last.lon), idx: pts.length - 1 };
+  }
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (pts[mid].cum < meters) lo = mid; else hi = mid;
+  }
+  const a = pts[lo], b = pts[hi];
+  const span = (b.cum - a.cum) || 1;
+  const t = (meters - a.cum) / span;
+  return {
+    lat: a.lat + (b.lat - a.lat) * t,
+    lon: a.lon + (b.lon - a.lon) * t,
+    heading: spBearing(a.lat, a.lon, b.lat, b.lon),
+    idx: lo
+  };
+}
+
+function spSnapToPath(lat, lon) {
+  const pts = spNav.pts;
+  if (pts.length < 2) return 0;
+  let bestD = 1e15, bestM = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const vx = b.lat - a.lat, vy = b.lon - a.lon;
+    const wx = lat - a.lat, wy = lon - a.lon;
+    const c2 = vx * vx + vy * vy;
+    let t = c2 ? (wx * vx + wy * vy) / c2 : 0;
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    const plat = a.lat + vx * t, plon = a.lon + vy * t;
+    const dlat = lat - plat, dlon = lon - plon;
+    const d = dlat * dlat + dlon * dlon;
+    if (d < bestD) {
+      bestD = d;
+      bestM = a.cum + t * ((b.cum - a.cum) || 0);
+    }
+  }
+  return bestM;
+}
+
+function spRotateVehicle(deg) {
+  if (!spGpsMarker) return;
+  const el = spGpsMarker.getElement();
+  if (!el) return;
+  const rot = el.querySelector('.sp-veh-rot');
+  if (rot) rot.style.transform = 'rotate(' + Math.round(deg) + 'deg)';
+}
+
+function spPlaceNavMarker(lat, lon, heading) {
+  if (!spLeaflet) return;
+  const latlng = [lat, lon];
+  if (!spGpsMarker) {
+    spGpsMarker = L.marker(latlng, { icon: spVehicleIcon(), keyboard: false, zIndexOffset: 800 }).addTo(spLeaflet);
+  } else {
+    spGpsMarker.setLatLng(latlng);
+  }
+  spRotateVehicle(heading);
+}
+
+function spPaintRemainingRoute(idx) {
+  if (!spRouteLine || !spNav.pts.length) return;
+  const cut = Math.max(0, idx);
+  const remain = spNav.pts.slice(cut).map(p => [p.lat, p.lon]);
+  if (remain.length >= 2) spRouteLine.setLatLngs(remain);
+  if (!spRouteGone) {
+    spRouteGone = L.polyline([], { color: '#6a7a88', weight: 5, opacity: 0.4, interactive: false }).addTo(spLeaflet);
+    if (spRouteLine && spRouteLine.bringToFront) spRouteLine.bringToFront();
+  }
+  const gone = spNav.pts.slice(0, cut + 1).map(p => [p.lat, p.lon]);
+  if (gone.length >= 2) spRouteGone.setLatLngs(gone);
+}
+
+function spCurrentStepIndex() {
+  const steps = spNav.steps;
+  if (!steps.length) return 0;
+  const m = spNav.meters;
+  for (let i = 0; i < steps.length; i++) {
+    if (m < (steps[i]._end - 12)) return i;
+  }
+  return steps.length - 1;
+}
+
+function spRefreshNavHud() {
+  const steps = spNav.steps;
+  const i = spCurrentStepIndex();
+  const step = steps[i] || null;
+  const next = steps[i + 1] || null;
+  const remainToTurn = step ? Math.max(0, step._end - spNav.meters) : 0;
+  const distTxt = step ? spFmtMiles(remainToTurn) : '—';
+  const street = step ? spManeuverText(step) : 'Set a destination to load the route';
+  const thenTxt = next ? ('Then ' + spManeuverText(next)) : (spNav.arrived ? 'You have arrived' : 'Search a town, state, or address, then Start Drive.');
+  const glyph = step ? spManeuverGlyph(step) : '↑';
+
+  const card = document.getElementById('sp-now-card');
+  if (card) card.classList.toggle('is-idle', !spNavActive);
+  const g = document.getElementById('sp-now-glyph');
+  const d = document.getElementById('sp-now-dist');
+  const s = document.getElementById('sp-now-street');
+  const t = document.getElementById('sp-now-then');
+  if (g) g.textContent = glyph;
+  if (d) d.textContent = spNavActive ? distTxt : '—';
+  if (s) s.textContent = street;
+  if (t) t.textContent = thenTxt;
+
+  spUpdateNextTurn(step ? Object.assign({}, step, { distance: remainToTurn }) : null, next);
+
+  const rows = document.querySelectorAll('#turns-list .turn-item');
+  rows.forEach((row, idx) => {
+    row.classList.toggle('active', idx === i);
+    row.classList.toggle('passed', idx < i);
+    const miles = row.querySelector('.turn-dist');
+    if (miles && steps[idx]) {
+      const left = Math.max(0, steps[idx]._end - spNav.meters);
+      miles.textContent = spFmtMiles(left);
+    }
+  });
+}
+
+function spNavZoom(mps) {
+  if (mps < 9) return 17;
+  if (mps < 15) return 16;
+  if (mps < 22) return 15;
+  return 14;
+}
+
+function spStopNavLoop() {
+  if (spNavRaf) { cancelAnimationFrame(spNavRaf); spNavRaf = null; }
+  spNav.lastTs = 0;
+}
+
+function spStartNavLoop() {
+  if (spNavRaf) cancelAnimationFrame(spNavRaf);
+  spNav.lastTs = 0;
+  function loop(ts) {
+    if (!spNavActive) { spNavRaf = null; return; }
+    spAdvanceNav(ts);
+    spNavRaf = requestAnimationFrame(loop);
+  }
+  spNavRaf = requestAnimationFrame(loop);
+}
+
+function spAdvanceNav(ts) {
+  if (!spNav.pts.length) return;
+  if (!spNav.lastTs) spNav.lastTs = ts;
+  const dt = Math.min(0.08, Math.max(0, (ts - spNav.lastTs) / 1000));
+  spNav.lastTs = ts;
+  if (spNav.arrived) return;
+
+  const gpsMph = spSpeedMph();
+  let mps;
+  const snap = (spGPSAvailable && spCoords.lat != null) ? spSnapToPath(spCoords.lat, spCoords.lon) : spNav.meters;
+  const gpsMoved = Math.abs(snap - (spNav.lastSnap || 0)) > 2.5;
+  spNav.lastSnap = snap;
+  if (gpsMoved && Math.abs(snap - spNav.meters) < 120) {
+    mps = Math.max(gpsMph, 3) / 2.236936292;
+    spNav.meters += (snap - spNav.meters) * Math.min(1, dt * 4);
+  } else {
+    mps = gpsMph >= 3.5 ? (gpsMph / 2.236936292) : spNav.typicalMps;
+    spNav.meters += mps * dt;
+  }
+  if (spNav.meters < 0) spNav.meters = 0;
+  if (spNav.meters > spNav.total) spNav.meters = spNav.total;
+  spNav.mps = mps;
+
+  const p = spPointAt(spNav.meters);
+  if (!p) return;
+  spNav.heading = p.heading;
+  spPlaceNavMarker(p.lat, p.lon, p.heading);
+
+  if (spFollowGps && spLeaflet && (ts - spNav.lastPan > 110)) {
+    spNav.lastPan = ts;
+    const z = spNavZoom(mps);
+    const cur = spLeaflet.getZoom();
+    const zoom = Math.abs(cur - z) >= 1 ? z : cur;
+    spLeaflet.setView([p.lat, p.lon], zoom, { animate: false });
+  }
+
+  if (ts - spNav.lastHud > 180) {
+    spNav.lastHud = ts;
+    spPaintRemainingRoute(p.idx);
+    spRefreshNavHud();
+    spPaintSpeed();
+  }
+
+  if (!spNav.arrived && spNav.meters >= spNav.total - 10) {
+    spNav.arrived = true;
+    spNav.meters = spNav.total;
+    spRefreshNavHud();
+    spToast('ARRIVED');
+  }
+}
+
 function spSyncLiveMap() {
   if (!spLeaflet) return;
+  if (spNavActive && spNav.pts.length) return;
   if (!(spGPSAvailable && spCoords.lat != null)) return;
   const latlng = [spCoords.lat, spCoords.lon];
   if (!spGpsMarker) {
-    spGpsMarker = L.marker(latlng, { icon: spVehicleIcon(), keyboard: false, zIndexOffset: 600 }).addTo(spLeaflet);
+    spGpsMarker = L.marker(latlng, { icon: spVehicleIcon(), keyboard: false, zIndexOffset: 800 }).addTo(spLeaflet);
   } else {
     spGpsMarker.setLatLng(latlng);
   }
@@ -5194,7 +5536,7 @@ function spSyncLiveMap() {
     spFollowGps = true;
     spLeaflet.setView(latlng, 14, { animate: true });
     spRefreshLeafletRadar();
-  } else if (spNavActive && spFollowGps) {
+  } else if (spFollowGps) {
     spLeaflet.panTo(latlng, { animate: true, duration: 0.35 });
   }
 }
@@ -5481,7 +5823,7 @@ async function spCommitDestination(place, skipRoute) {
   spPushRecent(place);
   spUpdateDestChrome(place);
   spEnsureLeaflet();
-  spDrawDestination(place, true);
+  spDrawDestination(place, !!skipRoute);
   if (!skipRoute) await spRouteTo(place);
 }
 
@@ -5584,30 +5926,77 @@ async function spRouteTo(place) {
     wx.style.color = spLastAlertState === 'normal' ? 'var(--green-safe)' : 'var(--amber)';
   }
 
+  const coordsLonLat = (route.geometry && route.geometry.coordinates) || [];
+  const coords = coordsLonLat.map(c => [c[1], c[0]]);
   if (spLeaflet) {
-    const coords = (route.geometry && route.geometry.coordinates || []).map(c => [c[1], c[0]]);
     if (spRouteLine) spRouteLine.remove();
+    if (spRouteGone) { spRouteGone.remove(); spRouteGone = null; }
     spRouteLine = L.polyline(coords, {
       color: '#ffab00',
       weight: 5,
-      opacity: 0.9
+      opacity: 0.92
     }).addTo(spLeaflet);
-    if (coords.length) spLeaflet.fitBounds(spRouteLine.getBounds().pad(0.18));
   }
 
   const steps = ((route.legs || [])[0] || {}).steps || [];
-  spFillTurns(steps, null);
-  spUpdateNextTurn(steps[0] || null, steps[1] || null);
+  let acc = 0;
+  const usable = steps.filter(s => s.maneuver && s.maneuver.type !== 'notification').map(s => {
+    const copy = Object.assign({}, s);
+    copy._start = acc;
+    acc += (s.distance || 0);
+    copy._end = acc;
+    return copy;
+  });
+
   spRouteMeta = {
     distance: route.distance || 0,
     duration: route.duration || 0,
-    coords: (route.geometry && route.geometry.coordinates) || []
+    coords: coordsLonLat
   };
+  spNav.pts = spBuildNavPath(coordsLonLat);
+  spNav.total = spNav.pts.length ? spNav.pts[spNav.pts.length - 1].cum : (route.distance || 0);
+  spNav.meters = 0;
+  if (spGPSAvailable && spCoords.lat != null && spNav.pts.length) {
+    const snap = spSnapToPath(spCoords.lat, spCoords.lon);
+    if (snap < 250) spNav.meters = snap;
+  }
+  spNav.heading = 0;
+  spNav.arrived = false;
+  spNav.steps = usable;
+  spNav.typicalMps = (route.duration > 0) ? Math.max(6, Math.min(31, route.distance / route.duration)) : 13.4;
+  spNav.mps = spNav.typicalMps;
+  spNav.lastTs = 0;
+  spNav.lastPan = 0;
+  spNav.lastHud = 0;
+  spNav.lastSnap = spNav.meters;
+
+  spFillTurns(usable, null);
   spNavActive = true;
-  spFollowGps = true;
   document.getElementById('nextturn-hud')?.classList.add('is-nav');
   document.getElementById('sp-end-drive')?.classList.add('show');
+  const start = spPointAt(spNav.meters);
+  if (start) spPlaceNavMarker(start.lat, start.lon, start.heading);
+  spRefreshNavHud();
   spTickTrip();
+  spStartNavLoop();
+
+  if (spLeaflet && start) {
+    if (spNav.total > 40000) {
+      spFollowGps = false;
+      spLeaflet.fitBounds(L.latLngBounds(coords).pad(0.12), { animate: true });
+      setTimeout(() => {
+        if (!spNavActive || !spLeaflet) return;
+        spFollowGps = true;
+        const p = spPointAt(spNav.meters);
+        if (p) spLeaflet.setView([p.lat, p.lon], 16, { animate: true });
+      }, 1100);
+    } else {
+      spFollowGps = true;
+      spLeaflet.setView([start.lat, start.lon], 16, { animate: true });
+    }
+  } else {
+    spFollowGps = true;
+  }
 }
 
 function spManeuverGlyph(step) {
@@ -5640,19 +6029,19 @@ function spFillTurns(steps, emptyMsg) {
   if (!list) return;
   if (!steps.length) {
     list.innerHTML = '<div class="turn-item"><div class="turn-info"><div class="turn-street">' +
-      (emptyMsg || 'Set a destination to load live turn-by-turn.') +
-      '</div></div></div>';
+      (emptyMsg || 'Set a destination to load turn-by-turn.') +
+      '</div><div class="turn-dist"></div></div></div>';
     return;
   }
-  const usable = steps.filter(s => s.maneuver && s.maneuver.type !== 'notification');
-  list.innerHTML = usable.slice(0, 12).map((s, i) =>
+  list.innerHTML = steps.slice(0, 14).map((s, i) =>
     '<div class="turn-item' + (i === 0 ? ' active' : '') + '">' +
       '<div class="turn-icon"></div>' +
-      '<div class="turn-info"><div class="turn-street"></div><div class="turn-dist"></div></div>' +
+      '<div class="turn-info"><div class="turn-street"></div></div>' +
+      '<div class="turn-dist"></div>' +
     '</div>'
   ).join('');
   const rows = list.querySelectorAll('.turn-item');
-  usable.slice(0, 12).forEach((s, i) => {
+  steps.slice(0, 14).forEach((s, i) => {
     rows[i].querySelector('.turn-icon').textContent = spManeuverGlyph(s);
     rows[i].querySelector('.turn-street').textContent = spManeuverText(s);
     rows[i].querySelector('.turn-dist').textContent = spFmtMiles(s.distance || 0);
@@ -5853,7 +6242,9 @@ function spSpeedMph() {
 }
 function spUseMetric() { return spGetSet().units === 'kmh'; }
 function spPaintSpeed() {
-  const mph = spSpeedMph();
+  const gpsMph = spSpeedMph();
+  const navMph = (spNavActive && spNav.mps > 0) ? spNav.mps * 2.236936292 : 0;
+  const mph = gpsMph >= 3.5 ? gpsMph : (navMph || gpsMph);
   const metric = spUseMetric();
   const shown = metric ? mph * 1.60934 : mph;
   const unit = metric ? 'KM/H' : 'MPH';
@@ -5863,11 +6254,16 @@ function spPaintSpeed() {
   const live = document.getElementById('speed-live');
   if (un) un.textContent = unit;
   if (el) {
-    el.textContent = spGPSAvailable ? String(Math.round(shown)) : '--';
+    el.textContent = (spGPSAvailable || spNavActive) ? String(Math.round(shown)) : '--';
     const cap = spSpeedLimitMph;
     el.style.color = (cap && mph > cap * 1.08) ? 'var(--red-alert)' : 'var(--amber)';
   }
-  if (live) live.textContent = spGPSAvailable ? 'GPS SPEED' : 'WAITING';
+  if (live) {
+    if (!spGPSAvailable && !spNavActive) live.textContent = 'WAITING';
+    else if (gpsMph >= 3.5) live.textContent = 'GPS SPEED';
+    else if (spNavActive) live.textContent = 'ON ROUTE';
+    else live.textContent = 'GPS SPEED';
+  }
   if (lim) {
     lim.style.display = spGetSet().limit === false ? 'none' : 'flex';
     if (spSpeedLimitMph == null) lim.textContent = '--';
@@ -5875,7 +6271,7 @@ function spPaintSpeed() {
   }
   const tripSpd = document.getElementById('sp-trip-spd');
   const tripLim = document.getElementById('sp-trip-lim');
-  if (tripSpd) tripSpd.textContent = (spGPSAvailable ? Math.round(shown) : 0) + ' ' + unit;
+  if (tripSpd) tripSpd.textContent = Math.round(shown) + ' ' + unit;
   if (tripLim) tripLim.textContent = spSpeedLimitMph == null ? '--' : (Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph) + ' ' + unit);
 }
 
@@ -5908,6 +6304,7 @@ function spParseMaxspeed(raw) {
 }
 
 function spRemainMeters() {
+  if (spNav.pts.length) return Math.max(0, spNav.total - spNav.meters);
   const coords = spRouteMeta.coords || [];
   if (!coords.length) return spRouteMeta.distance || 0;
   if (!(spGPSAvailable && spCoords.lat != null)) return spRouteMeta.distance || 0;
@@ -5965,7 +6362,8 @@ function spTickTrip() {
   }
   const remainM = spRemainMeters();
   const delayS = spConstructionDelayS();
-  const mph = spSpeedMph();
+  const gpsMph = spSpeedMph();
+  const mph = gpsMph >= 3.5 ? gpsMph : (spNav.mps * 2.236936292);
   let remainS;
   if (mph >= 3.5) remainS = (remainM / 1609.344) / mph * 3600 + delayS;
   else {
@@ -5992,13 +6390,16 @@ function spTickTrip() {
 }
 
 function spEndDrive() {
+  spStopNavLoop();
   spNavActive = false;
   spDestination = null;
   spArrivalAt = 0;
+  spNav = { pts: [], meters: 0, total: 0, heading: 0, mps: 0, typicalMps: 13.4, lastTs: 0, lastPan: 0, lastHud: 0, steps: [], arrived: false, lastSnap: 0 };
   spRouteMeta = { distance: 0, duration: 0, coords: [] };
   document.getElementById('nextturn-hud')?.classList.remove('is-nav');
   document.getElementById('sp-end-drive')?.classList.remove('show');
   if (spRouteLine) { spRouteLine.remove(); spRouteLine = null; }
+  if (spRouteGone) { spRouteGone.remove(); spRouteGone = null; }
   if (spDestMarker) { spDestMarker.remove(); spDestMarker = null; }
   document.querySelectorAll('.sp-search-dest').forEach(el => {
     el.textContent = 'Town, state, or address';
@@ -6006,8 +6407,13 @@ function spEndDrive() {
   });
   const to = document.getElementById('sp-to-name');
   if (to) to.textContent = 'Set a destination';
-  spFillTurns([], 'Set a destination to load live turn-by-turn.');
+  spFillTurns([], 'Set a destination to load turn-by-turn.');
   spUpdateNextTurn(null);
+  spRefreshNavHud();
+  if (spGPSAvailable && spCoords.lat != null) {
+    spPlaceNavMarker(spCoords.lat, spCoords.lon, 0);
+    if (spLeaflet && spFollowGps) spLeaflet.setView([spCoords.lat, spCoords.lon], 14, { animate: true });
+  }
   spTickTrip();
   spToast('DRIVE ENDED');
 }
@@ -6025,6 +6431,11 @@ function spRecenter() {
   spEnsureLeaflet();
   if (!spLeaflet) return;
   spFollowGps = true;
+  if (spNavActive && spNav.pts.length) {
+    const p = spPointAt(spNav.meters);
+    if (p) spLeaflet.setView([p.lat, p.lon], Math.max(spLeaflet.getZoom(), 16), { animate: true });
+    return;
+  }
   if (spGPSAvailable && spCoords.lat != null) {
     spLeaflet.setView([spCoords.lat, spCoords.lon], Math.max(spLeaflet.getZoom(), 14), { animate: true });
   }
@@ -6154,13 +6565,14 @@ function spVehiclePip() {
 
 function spVehicleIcon() {
   const v = spCurrentVehicle();
+  const deg = spNav.heading || 0;
   if (!v || typeof L === 'undefined') return spVehiclePip();
-  return L.icon({
-    iconUrl: v.url,
+  return L.divIcon({
+    className: 'sp-vehicle-wrap',
+    html: '<div class="sp-veh-rot" style="transform:rotate(' + Math.round(deg) + 'deg)"><img src="' + v.url + '" width="' + v.w + '" height="' + v.h + '" alt=""></div>',
     iconSize: [v.w, v.h],
-    iconAnchor: [Math.round(v.w / 2), v.h - 2],
-    popupAnchor: [0, -(v.h - 4)],
-    className: 'sp-vehicle-marker'
+    iconAnchor: [Math.round(v.w / 2), v.h - 4],
+    popupAnchor: [0, -(v.h - 4)]
   });
 }
 
