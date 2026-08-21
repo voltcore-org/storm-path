@@ -143,7 +143,7 @@
     padding: 3px 8px;
     font-size: 0.62rem;
     letter-spacing: 1px;
-    animation: alert-flash 1.5s ease-in-out infinite;
+    animation: none;
   }
 
   /* Real NWS weather/alerts + real radar imagery both loaded successfully —
@@ -153,6 +153,9 @@
     border: 1px solid var(--green-safe);
     color: var(--green-safe);
     animation: none;
+  }
+  .alert-badge.down {
+    animation: alert-flash 1.5s ease-in-out infinite;
   }
 
   @keyframes alert-flash {
@@ -1106,7 +1109,7 @@
 
   .state-safe .sp-source-panel { display: none; }
   .state-safe .sp-statebar { border-bottom-color: rgba(206,147,216,0.3); }
-  .state-safe .sp-action-icon { animation: alert-flash 1.8s ease-in-out infinite; }
+  .state-safe .sp-action-icon { animation: none; }
 
   .sp-offline-banner {
     display: none;
@@ -1271,13 +1274,13 @@
    Additive overrides only. Core engines remain unchanged.
    ═══════════════════════════════════════════════════════ */
 
-/* STEP 1 — 200ms screen transition */
+/* STEP 1 — screens stay put on first paint. No fade-in blink on DRIVER. */
 .sp-screen {
   position: relative;
 }
 
 .sp-screen.active {
-  animation: sp-screen-enter 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: none;
 }
 
 @keyframes sp-screen-enter {
@@ -3781,12 +3784,15 @@ function spUpdateWxRadarBadge() {
   if (spWeatherOK === true && spRadarOK === true) {
     el.textContent = '✓ WX + RADAR LIVE';
     el.classList.add('live');
+    el.classList.remove('down');
   } else if (spWeatherOK === false || spRadarOK === false) {
     el.textContent = '⚠ WX/RADAR UNAVAILABLE — SAFE MODE';
     el.classList.remove('live');
+    el.classList.add('down');
   } else {
     el.textContent = '⚠ AWAITING GPS FIX';
     el.classList.remove('live');
+    el.classList.remove('down');
   }
 }
 
@@ -4265,29 +4271,25 @@ function spSetState(stateKey) {
     console.error('StormPath spSetState: invalid state key "' + stateKey + '" — state preserved.');
     return;
   }
+  const screen = document.getElementById('screen-driver');
+  if (!screen) return;
+  const already = (spCurrentState === stateKey && screen.classList.contains('state-' + stateKey));
   spCurrentState = stateKey;
   const data = SP_STATES[stateKey];
 
-  // Claim this transition slot; any older pending setTimeout will see a stale token
   const myToken = ++_spStateToken;
-
-  const screen = document.getElementById('screen-driver');
-  if (!screen) return;
   const center = screen.querySelector('.sp-center');
   const fallbackBox = screen.querySelector('.sp-fallback');
 
-  if (center) center.classList.add('sp-fade');
-  if (fallbackBox) fallbackBox.classList.add('sp-fade');
-
-  setTimeout(() => {
-    // Stale callback guard — only the latest requested state renders
+  const apply = function() {
     if (myToken !== _spStateToken) return;
 
-    // Update DRIVER visual state class ONLY — never .active, never screen visibility
-    const currentClasses = screen.className;
-    screen.className = currentClasses
-      .replace(/\bstate-\w+\b/g, '')
-      .trim() + ' state-' + stateKey;
+    if (!already) {
+      const currentClasses = screen.className;
+      screen.className = currentClasses
+        .replace(/\bstate-\w+\b/g, '')
+        .trim() + ' state-' + stateKey;
+    }
 
     const stateLabel = document.getElementById('sp-state-label');
     if (stateLabel) stateLabel.textContent = data.label;
@@ -4296,7 +4298,6 @@ function spSetState(stateKey) {
     const confBadge   = document.getElementById('sp-conf-badge');
     const conf = spValidateConfidence(data);
     if (confLabelEl && confLabelEl.childNodes.length) {
-      // CORRECTION 1: zero-safe — do not use || (valid 0 would become falsy)
       confLabelEl.childNodes[0].textContent = (conf.confPercent !== null && conf.confPercent !== undefined)
         ? ('CONFIDENCE: ' + conf.confPercent)
         : 'CONFIDENCE: N/A';
@@ -4324,12 +4325,11 @@ function spSetState(stateKey) {
     if (center) center.classList.remove('sp-fade');
     if (fallbackBox) fallbackBox.classList.remove('sp-fade');
 
-    // Sync WEATHER mirror if weather is currently visible — never changes which screen is active
     if (activeScreen === 'weather') syncWeatherPanel();
+  };
 
-  }, 220);
+  apply();
 
-  // Update DEV panel active button (immediate, outside transition)
   document.querySelectorAll('#sp-dev-panel button[id^="sp-btn-"]').forEach(b => b.classList.remove('active-state'));
   const activeBtn = document.getElementById('sp-btn-' + stateKey);
   if (activeBtn) activeBtn.classList.add('active-state');
@@ -4566,9 +4566,10 @@ function runStartupSafetyChecks() {
   const screen = document.getElementById('screen-driver');
   if (!screen) return; // avoid uncaught exception if DOM missing
 
-  // Startup SAFE MODE handling sets DRIVER active — the one permitted exception per spec §8
-  screen.className = 'sp-screen active state-safe';
-
+  if (!screen.classList.contains('active')) screen.classList.add('active');
+  if (!screen.classList.contains('state-safe')) {
+    screen.className = (screen.className.replace(/\bstate-\w+\b/g, '').trim() + ' state-safe');
+  }
   const stateLabel = document.getElementById('sp-state-label');
   if (stateLabel) stateLabel.textContent = data.label;
 
