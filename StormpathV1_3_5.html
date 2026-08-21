@@ -1999,6 +1999,49 @@ body {
     letter-spacing: 1px;
   }
 
+  .sp-vehicle-btn {
+    width: 52px;
+    min-height: 48px;
+    flex-shrink: 0;
+    background: rgba(6,13,20,0.94);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    padding: 4px 2px 3px;
+  }
+  .sp-vehicle-btn:hover, .sp-vehicle-btn:focus-visible {
+    background: rgba(0,229,255,0.1);
+    box-shadow: 0 0 16px rgba(0,229,255,0.18);
+    outline: none;
+  }
+  .sp-vehicle-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .sp-vehicle-btn .sp-veh-thumb {
+    width: 22px;
+    height: 28px;
+    object-fit: contain;
+    object-position: center bottom;
+    display: none;
+    pointer-events: none;
+  }
+  .sp-vehicle-btn.has-mark svg { display: none; }
+  .sp-vehicle-btn.has-mark .sp-veh-thumb { display: block; }
+  .sp-vehicle-btn span {
+    font-family: 'Courier New', monospace;
+    font-size: 0.48rem;
+    letter-spacing: 1px;
+  }
+
+  img.sp-vehicle-marker {
+    background: none !important;
+    border: none !important;
+  }
+
   .hud-nextturn { bottom: 128px; z-index: 12; }
   .hud-radar-time { bottom: 72px; right: 16px; z-index: 12; }
   .topbar-right > .status-item { display: none; }
@@ -2299,9 +2342,65 @@ body {
   }
   .sp-post-intel.show { display: block; }
   .sp-intel-note {
-    font-size: 0.7rem;
-    color: var(--text-secondary);
     margin-top: 10px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .sp-veh-sec { margin-bottom: 14px; }
+  .sp-veh-sec-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    color: var(--cyan-dim);
+    margin: 4px 0 8px;
+  }
+  .sp-veh-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .sp-veh-tile {
+    min-height: 148px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: 10px 8px 8px;
+    text-align: center;
+  }
+  .sp-veh-tile:hover { border-color: var(--cyan); }
+  .sp-veh-tile.selected {
+    border-color: var(--cyan);
+    background: rgba(0,229,255,0.08);
+    box-shadow: 0 0 14px rgba(0,229,255,0.16);
+  }
+  .sp-veh-ico {
+    width: 80px;
+    height: 96px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .sp-veh-ico img {
+    width: 80px;
+    height: 96px;
+    object-fit: contain;
+    object-position: center bottom;
+    display: block;
+    pointer-events: none;
+  }
+  .sp-veh-tile .t { font-family: 'Courier New', monospace; font-size: 0.68rem; letter-spacing: 1.5px; }
+  .sp-veh-tile .d { font-size: 0.68rem; color: var(--text-secondary); }
+  .sp-veh-note {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
     line-height: 1.45;
   }
 
@@ -2638,6 +2737,11 @@ body {
             <div class="sp-search-dest is-empty">Address, place, or landmark</div>
           </div>
         </button>
+        <button type="button" class="sp-vehicle-btn" id="sp-vehicle-btn" aria-label="Choose your marker">
+          <svg viewBox="0 0 24 24"><path d="M12 3c2 5 6 8 6 12a6 6 0 1 1-12 0c0-4 4-7 6-12z"></path></svg>
+          <img class="sp-veh-thumb" id="sp-veh-thumb" alt="">
+          <span>MARKER</span>
+        </button>
         <button type="button" class="sp-intel-btn" id="sp-intel-btn" aria-label="Report driver intel">
           <svg viewBox="0 0 24 24"><path d="M12 3l10 18H2L12 3z"></path><path d="M12 10v5"></path></svg>
           <span>REPORT</span>
@@ -2969,6 +3073,19 @@ body {
   <div id="sp-subtype-row" class="sp-subtype-row"></div>
   <button type="button" class="sp-post-intel" id="sp-post-intel">POST INTEL</button>
   <div class="sp-intel-note">Drops a pin at your live GPS fix (or map center if GPS is still acquiring). Stored on this device for 3 hours. Fleet-wide share across other phones is the next layer — the board is already built for it.</div>
+</div>
+
+<div id="sp-vehicle-sheet" class="sp-sheet" role="dialog" aria-label="Choose your marker">
+  <div class="sp-sheet-handle"></div>
+  <div class="sp-sheet-head">
+    <div>
+      <div class="sp-sheet-kicker">YOUR MARKER</div>
+      <div class="sp-sheet-title">Ride as a storm form</div>
+    </div>
+    <button type="button" class="sp-sheet-close" data-close-sheet aria-label="Close">×</button>
+  </div>
+  <div id="sp-vehicle-sections"></div>
+  <div class="sp-veh-note">Tap one. It stays on your GPS path until you tap another. More sections slot in below as you add them.</div>
 </div>
 <div id="sp-toast" class="sp-toast" role="status"></div>
 
@@ -4419,6 +4536,20 @@ const SP_LS_RECENTS = 'sp.recents.v1';
 const SP_LS_SAVED = 'sp.saved.v1';
 const SP_LS_INTEL = 'sp.intel.v1';
 const SP_INTEL_TTL_MS = 3 * 60 * 60 * 1000;
+const SP_LS_VEHICLE = 'sp.vehicle.v1';
+
+const SP_VEHICLE_SECTIONS = [
+  {
+    id: 'vortex',
+    label: 'VORTEX',
+    items: [
+      { id: 'blaze', label: 'BLAZE', desc: 'Fire funnel', url: 'vehicles/blaze.png', w: 42, h: 64 },
+      { id: 'twister', label: 'TWISTER', desc: 'Classic funnel', url: 'vehicles/twister.png', w: 42, h: 64 },
+      { id: 'cell', label: 'CELL', desc: 'Radar green', url: 'vehicles/cell.png', w: 42, h: 64 },
+      { id: 'ion', label: 'ION', desc: 'Plasma funnel', url: 'vehicles/ion.png', w: 42, h: 64 }
+    ]
+  }
+];
 
 const SP_INTEL_TYPES = {
   unit: {
@@ -4577,8 +4708,7 @@ function spSyncLiveMap() {
   if (!(spGPSAvailable && spCoords.lat != null)) return;
   const latlng = [spCoords.lat, spCoords.lon];
   if (!spGpsMarker) {
-    const icon = L.divIcon({ className: '', html: '<div class="sp-marker-gps"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
-    spGpsMarker = L.marker(latlng, { icon: icon, keyboard: false, zIndexOffset: 600 }).addTo(spLeaflet);
+    spGpsMarker = L.marker(latlng, { icon: spVehicleIcon(), keyboard: false, zIndexOffset: 600 }).addTo(spLeaflet);
   } else {
     spGpsMarker.setLatLng(latlng);
   }
@@ -5129,6 +5259,92 @@ function spRenderIntelHazards() {
   });
 }
 
+function spFindVehicle(id) {
+  if (!id) return null;
+  for (let s = 0; s < SP_VEHICLE_SECTIONS.length; s++) {
+    const items = SP_VEHICLE_SECTIONS[s].items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].id === id) return items[i];
+    }
+  }
+  return null;
+}
+
+function spCurrentVehicle() {
+  return spFindVehicle(spLsRead(SP_LS_VEHICLE, null));
+}
+
+function spVehiclePip() {
+  return L.divIcon({
+    className: '',
+    html: '<div class="sp-marker-gps"></div>',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+}
+
+function spVehicleIcon() {
+  const v = spCurrentVehicle();
+  if (!v || typeof L === 'undefined') return spVehiclePip();
+  return L.icon({
+    iconUrl: v.url,
+    iconSize: [v.w, v.h],
+    iconAnchor: [Math.round(v.w / 2), v.h - 2],
+    popupAnchor: [0, -(v.h - 4)],
+    className: 'sp-vehicle-marker'
+  });
+}
+
+function spRefreshVehicleButton() {
+  const btn = document.getElementById('sp-vehicle-btn');
+  const thumb = document.getElementById('sp-veh-thumb');
+  const v = spCurrentVehicle();
+  if (!btn || !thumb) return;
+  if (v) {
+    thumb.src = v.url;
+    btn.classList.add('has-mark');
+  } else {
+    thumb.removeAttribute('src');
+    btn.classList.remove('has-mark');
+  }
+}
+
+function spApplyVehicleMarker() {
+  if (!spGpsMarker || typeof L === 'undefined') return;
+  spGpsMarker.setIcon(spVehicleIcon());
+}
+
+function spSetVehicle(id) {
+  const v = spFindVehicle(id);
+  if (!v) return;
+  spLsWrite(SP_LS_VEHICLE, id);
+  document.querySelectorAll('.sp-veh-tile').forEach(t => {
+    t.classList.toggle('selected', t.getAttribute('data-vehicle') === id);
+  });
+  spRefreshVehicleButton();
+  spApplyVehicleMarker();
+  spToast('MARKER SET · ' + v.label);
+}
+
+function spRenderVehicleSheet() {
+  const host = document.getElementById('sp-vehicle-sections');
+  if (!host) return;
+  const cur = spLsRead(SP_LS_VEHICLE, null);
+  host.innerHTML = SP_VEHICLE_SECTIONS.map(sec => {
+    const tiles = sec.items.map(it =>
+      '<button type="button" class="sp-veh-tile' + (cur === it.id ? ' selected' : '') + '" data-vehicle="' + it.id + '">' +
+        '<span class="sp-veh-ico"><img src="' + it.url + '" width="80" height="96" alt=""></span>' +
+        '<span class="t">' + it.label + '</span>' +
+        '<span class="d">' + it.desc + '</span>' +
+      '</button>'
+    ).join('');
+    return '<div class="sp-veh-sec"><div class="sp-veh-sec-label">' + sec.label + '</div><div class="sp-veh-grid">' + tiles + '</div></div>';
+  }).join('');
+  host.querySelectorAll('[data-vehicle]').forEach(btn => {
+    btn.addEventListener('click', () => spSetVehicle(btn.getAttribute('data-vehicle')));
+  });
+}
+
 function spBindNavUi() {
   document.getElementById('sp-search-pill')?.addEventListener('click', () => spOpenSheet('sp-search-sheet'));
   document.getElementById('sp-driver-search')?.addEventListener('click', () => {
@@ -5137,6 +5353,10 @@ function spBindNavUi() {
   });
   document.getElementById('sp-to-name')?.addEventListener('click', () => spOpenSheet('sp-search-sheet'));
   document.getElementById('sp-intel-btn')?.addEventListener('click', spOpenIntel);
+  document.getElementById('sp-vehicle-btn')?.addEventListener('click', () => {
+    spRenderVehicleSheet();
+    spOpenSheet('sp-vehicle-sheet');
+  });
   document.getElementById('sp-sheet-backdrop')?.addEventListener('click', spCloseSheets);
   document.querySelectorAll('[data-close-sheet]').forEach(b => b.addEventListener('click', spCloseSheets));
   document.getElementById('sp-search-input')?.addEventListener('input', spOnSearchInput);
@@ -5186,6 +5406,7 @@ function spBindNavUi() {
 
 function spBootNav() {
   spBindNavUi();
+  spRefreshVehicleButton();
   spRenderIntelHazards();
   spFillTurns([], 'Set a destination to load live turn-by-turn.');
   spUpdateNextTurn(null);
