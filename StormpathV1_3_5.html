@@ -2403,6 +2403,63 @@ body {
     color: var(--text-secondary);
     line-height: 1.45;
   }
+  .sp-veh-back {
+    display: none;
+    width: 36px;
+    height: 36px;
+    margin-right: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--cyan);
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .sp-veh-back.show { display: flex; align-items: center; justify-content: center; }
+  .sp-veh-back:hover { border-color: var(--cyan); }
+  .sp-veh-head-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+  .sp-sheet-head { align-items: center; }
+  .sp-veh-pack {
+    min-height: 124px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 10px 8px;
+    text-align: left;
+  }
+  .sp-veh-pack:hover { border-color: var(--cyan); }
+  .sp-veh-pack.active {
+    border-color: var(--cyan);
+    box-shadow: 0 0 14px rgba(0,229,255,0.16);
+  }
+  .sp-veh-pack-row {
+    display: flex;
+    gap: 4px;
+    height: 58px;
+    align-items: flex-end;
+    justify-content: space-around;
+  }
+  .sp-veh-pack-row img {
+    width: 36px;
+    height: 56px;
+    object-fit: contain;
+    object-position: center bottom;
+    pointer-events: none;
+  }
+  .sp-veh-pack .t { font-family: 'Courier New', monospace; font-size: 0.72rem; letter-spacing: 1.8px; }
+  .sp-veh-pack .d { font-size: 0.68rem; color: var(--text-secondary); }
 
   .sp-toast {
     position: fixed;
@@ -3078,14 +3135,17 @@ body {
 <div id="sp-vehicle-sheet" class="sp-sheet" role="dialog" aria-label="Choose your marker">
   <div class="sp-sheet-handle"></div>
   <div class="sp-sheet-head">
-    <div>
-      <div class="sp-sheet-kicker">YOUR MARKER</div>
-      <div class="sp-sheet-title">Ride as a storm form</div>
+    <div class="sp-veh-head-main">
+      <button type="button" class="sp-veh-back" id="sp-veh-back" aria-label="Back to sections">‹</button>
+      <div>
+        <div class="sp-sheet-kicker" id="sp-veh-kicker">YOUR MARKER</div>
+        <div class="sp-sheet-title" id="sp-veh-title">Choose a form</div>
+      </div>
     </div>
     <button type="button" class="sp-sheet-close" data-close-sheet aria-label="Close">×</button>
   </div>
   <div id="sp-vehicle-sections"></div>
-  <div class="sp-veh-note">Tap one. It stays on your GPS path until you tap another. More sections slot in below as you add them.</div>
+  <div class="sp-veh-note" id="sp-veh-note">Tap a pack — its four markers pop up. Tap one and it stays on your GPS path.</div>
 </div>
 <div id="sp-toast" class="sp-toast" role="status"></div>
 
@@ -4542,6 +4602,7 @@ const SP_VEHICLE_SECTIONS = [
   {
     id: 'vortex',
     label: 'VORTEX',
+    desc: 'Storm forms',
     items: [
       { id: 'blaze', label: 'BLAZE', desc: 'Fire funnel', url: 'vehicles/blaze.png', w: 42, h: 64 },
       { id: 'twister', label: 'TWISTER', desc: 'Classic funnel', url: 'vehicles/twister.png', w: 42, h: 64 },
@@ -4552,6 +4613,7 @@ const SP_VEHICLE_SECTIONS = [
   {
     id: 'strike',
     label: 'STRIKE',
+    desc: 'Lightning',
     items: [
       { id: 'flare', label: 'FLARE', desc: 'Fire strike', url: 'vehicles/flare.png', w: 32, h: 64 },
       { id: 'bolt', label: 'BOLT', desc: 'Cloud to ground', url: 'vehicles/bolt.png', w: 28, h: 64 },
@@ -4562,11 +4624,23 @@ const SP_VEHICLE_SECTIONS = [
   {
     id: 'hail',
     label: 'HAIL',
+    desc: 'Ice cores',
     items: [
       { id: 'ember', label: 'EMBER', desc: 'Fire cores', url: 'vehicles/ember.png', w: 44, h: 64 },
       { id: 'ice', label: 'ICE', desc: 'Live hail', url: 'vehicles/ice.png', w: 44, h: 64 },
       { id: 'glow', label: 'GLOW', desc: 'Radar green', url: 'vehicles/glow.png', w: 44, h: 64 },
       { id: 'nova', label: 'NOVA', desc: 'Plasma cores', url: 'vehicles/nova.png', w: 44, h: 64 }
+    ]
+  },
+  {
+    id: 'rain',
+    label: 'RAIN',
+    desc: 'Falling water',
+    items: [
+      { id: 'lava', label: 'LAVA', desc: 'Fire rain', url: 'vehicles/lava.png', w: 42, h: 64 },
+      { id: 'pour', label: 'POUR', desc: 'Live rain', url: 'vehicles/pour.png', w: 42, h: 64 },
+      { id: 'acid', label: 'ACID', desc: 'Radar green', url: 'vehicles/acid.png', w: 42, h: 64 },
+      { id: 'neon', label: 'NEON', desc: 'Plasma rain', url: 'vehicles/neon.png', w: 40, h: 64 }
     ]
   }
 ];
@@ -4631,6 +4705,7 @@ let spDestination = null;
 let spIntelPick = { type: null, subtype: null };
 let spPendingPlace = null;
 let spRadarMoveTimer = null;
+let spVehicleView = null;
 
 function spIconSvg() {
   return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>';
@@ -5334,6 +5409,18 @@ function spApplyVehicleMarker() {
   spGpsMarker.setIcon(spVehicleIcon());
 }
 
+function spFindVehicleSection(id) {
+  if (!id) return null;
+  for (let s = 0; s < SP_VEHICLE_SECTIONS.length; s++) {
+    if (SP_VEHICLE_SECTIONS[s].id === id) return SP_VEHICLE_SECTIONS[s];
+    const items = SP_VEHICLE_SECTIONS[s].items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].id === id) return SP_VEHICLE_SECTIONS[s];
+    }
+  }
+  return null;
+}
+
 function spSetVehicle(id) {
   const v = spFindVehicle(id);
   if (!v) return;
@@ -5341,27 +5428,71 @@ function spSetVehicle(id) {
   document.querySelectorAll('.sp-veh-tile').forEach(t => {
     t.classList.toggle('selected', t.getAttribute('data-vehicle') === id);
   });
+  document.querySelectorAll('.sp-veh-pack').forEach(t => {
+    const sec = spFindVehicleSection(id);
+    t.classList.toggle('active', !!(sec && t.getAttribute('data-pack') === sec.id));
+  });
   spRefreshVehicleButton();
   spApplyVehicleMarker();
   spToast('MARKER SET · ' + v.label);
 }
 
+function spOpenVehiclePack(id) {
+  const sec = SP_VEHICLE_SECTIONS.find(s => s.id === id);
+  if (!sec) return;
+  spVehicleView = id;
+  spRenderVehicleSheet();
+}
+
+function spVehicleHome() {
+  spVehicleView = null;
+  spRenderVehicleSheet();
+}
+
 function spRenderVehicleSheet() {
   const host = document.getElementById('sp-vehicle-sections');
+  const back = document.getElementById('sp-veh-back');
+  const kicker = document.getElementById('sp-veh-kicker');
+  const title = document.getElementById('sp-veh-title');
+  const note = document.getElementById('sp-veh-note');
   if (!host) return;
   const cur = spLsRead(SP_LS_VEHICLE, null);
-  host.innerHTML = SP_VEHICLE_SECTIONS.map(sec => {
-    const tiles = sec.items.map(it =>
+  const pack = spVehicleView ? SP_VEHICLE_SECTIONS.find(s => s.id === spVehicleView) : null;
+
+  if (pack) {
+    if (back) back.classList.add('show');
+    if (kicker) kicker.textContent = 'YOUR MARKER · ' + pack.label;
+    if (title) title.textContent = 'Pick one';
+    if (note) note.textContent = 'Tap any of the four. It rides your GPS until you pick another. Back returns to all packs.';
+    host.innerHTML = '<div class="sp-veh-grid">' + pack.items.map(it =>
       '<button type="button" class="sp-veh-tile' + (cur === it.id ? ' selected' : '') + '" data-vehicle="' + it.id + '">' +
         '<span class="sp-veh-ico"><img src="' + it.url + '" width="80" height="96" alt=""></span>' +
         '<span class="t">' + it.label + '</span>' +
         '<span class="d">' + it.desc + '</span>' +
       '</button>'
-    ).join('');
-    return '<div class="sp-veh-sec"><div class="sp-veh-sec-label">' + sec.label + '</div><div class="sp-veh-grid">' + tiles + '</div></div>';
-  }).join('');
-  host.querySelectorAll('[data-vehicle]').forEach(btn => {
-    btn.addEventListener('click', () => spSetVehicle(btn.getAttribute('data-vehicle')));
+    ).join('') + '</div>';
+    host.querySelectorAll('[data-vehicle]').forEach(btn => {
+      btn.addEventListener('click', () => spSetVehicle(btn.getAttribute('data-vehicle')));
+    });
+    return;
+  }
+
+  if (back) back.classList.remove('show');
+  if (kicker) kicker.textContent = 'YOUR MARKER';
+  if (title) title.textContent = 'Choose a form';
+  if (note) note.textContent = 'Tap a pack — its four markers pop up. Tap one and it stays on your GPS path.';
+  const curSec = spFindVehicleSection(cur);
+  host.innerHTML = '<div class="sp-veh-grid">' + SP_VEHICLE_SECTIONS.map(sec => {
+    const thumbs = sec.items.map(it => '<img src="' + it.url + '" alt="">').join('');
+    const on = curSec && curSec.id === sec.id;
+    return '<button type="button" class="sp-veh-pack' + (on ? ' active' : '') + '" data-pack="' + sec.id + '">' +
+      '<div class="sp-veh-pack-row">' + thumbs + '</div>' +
+      '<span class="t">' + sec.label + '</span>' +
+      '<span class="d">' + sec.desc + ' · 4 markers</span>' +
+    '</button>';
+  }).join('') + '</div>';
+  host.querySelectorAll('[data-pack]').forEach(btn => {
+    btn.addEventListener('click', () => spOpenVehiclePack(btn.getAttribute('data-pack')));
   });
 }
 
@@ -5374,8 +5505,14 @@ function spBindNavUi() {
   document.getElementById('sp-to-name')?.addEventListener('click', () => spOpenSheet('sp-search-sheet'));
   document.getElementById('sp-intel-btn')?.addEventListener('click', spOpenIntel);
   document.getElementById('sp-vehicle-btn')?.addEventListener('click', () => {
+    spVehicleView = null;
     spRenderVehicleSheet();
     spOpenSheet('sp-vehicle-sheet');
+  });
+  document.getElementById('sp-veh-back')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    spVehicleHome();
   });
   document.getElementById('sp-sheet-backdrop')?.addEventListener('click', spCloseSheets);
   document.querySelectorAll('[data-close-sheet]').forEach(b => b.addEventListener('click', spCloseSheets));
