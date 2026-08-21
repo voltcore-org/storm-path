@@ -1999,8 +1999,9 @@ body {
     letter-spacing: 1px;
   }
 
-  .hud-nextturn { bottom: 72px; }
-  .hud-radar-time { bottom: 72px; right: 16px; }
+  .hud-nextturn { bottom: 128px; z-index: 12; }
+  .hud-radar-time { bottom: 72px; right: 16px; z-index: 12; }
+  .topbar-right > .status-item { display: none; }
   .hud-storm-warning.sp-sim-hidden { display: none !important; }
 
   .sp-sheet-backdrop {
@@ -2329,7 +2330,7 @@ body {
 
   @media (max-width: 620px) {
     .sp-nav-dock { left: 10px; right: 10px; bottom: 8px; }
-    .hud-nextturn { left: 10px; right: 10px; min-width: 0; bottom: 68px; }
+    .hud-nextturn { left: 10px; right: 10px; min-width: 0; bottom: 128px; }
     .hud-speed { display: none; }
     .hud-radar-time { display: none; }
     .sp-toast { white-space: normal; max-width: calc(100% - 24px); text-align: center; }
@@ -4700,6 +4701,9 @@ function spEsc(s) {
 function spOnSearchInput() {
   const input = document.getElementById('sp-search-input');
   const clear = document.getElementById('sp-search-clear');
+  const preview = document.getElementById('sp-preview');
+  if (preview) preview.classList.remove('show');
+  spPendingPlace = null;
   const q = (input && input.value || '').trim();
   if (clear) clear.classList.toggle('show', q.length > 0);
   clearTimeout(spSearchTimer);
