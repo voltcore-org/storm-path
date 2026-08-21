@@ -2092,6 +2092,65 @@ body {
     color: var(--text-secondary);
     margin-top: 3px;
   }
+  #screen-driver:not(.is-trip) #sp-trip-live { display: none; }
+  #screen-driver:not(.is-alert) .sp-action-icon { display: none; }
+  #screen-driver:not(.is-alert) .sp-action {
+    font-size: 0.72rem;
+    letter-spacing: 1.6px;
+    font-weight: 600;
+    opacity: 0.85;
+  }
+  #screen-driver:not(.is-alert) .sp-reason,
+  #screen-driver:not(.is-alert) .sp-fallback { display: none; }
+  #screen-driver:not(.is-trip):not(.is-alert) .sp-statebar,
+  #screen-driver:not(.is-trip):not(.is-alert) .sp-source-panel,
+  #screen-driver:not(.is-trip):not(.is-alert) .sp-action,
+  #screen-driver:not(.is-trip):not(.is-alert) .sp-action-icon { display: none; }
+  #screen-driver .sp-home-lead {
+    display: none;
+    max-width: 28rem;
+    margin: 8px auto 16px;
+    padding: 22px 20px 20px;
+    text-align: left;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+  }
+  #screen-driver:not(.is-trip) .sp-home-lead { display: block; }
+  .sp-home-kicker {
+    font-family: 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 2.4px;
+    color: var(--cyan);
+    margin-bottom: 8px;
+  }
+  .sp-home-title {
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+  }
+  .sp-home-copy {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    margin: 0 0 14px;
+  }
+  .sp-home-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .sp-home-stats span {
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.2px;
+    color: var(--cyan);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    background: rgba(0,229,255,0.05);
+  }
 
   #sp-route-host .route-summary { display: none; }
   #sp-route-host .panel-section { padding: 12px 0 4px; }
@@ -2565,20 +2624,87 @@ body {
   .hud-nextturn { opacity: 0; pointer-events: none; }
   .hud-nextturn.is-nav { opacity: 1; pointer-events: none; }
   .hud-speed {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     top: 10px !important;
     right: 10px !important;
     bottom: auto !important;
     z-index: 22;
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    text-align: center;
   }
-  .speed-val { font-variant-numeric: tabular-nums; }
+  .speed-dial {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(6,13,20,0.94);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  .speed-ring {
+    position: absolute;
+    inset: 3px;
+    width: calc(100% - 6px);
+    height: calc(100% - 6px);
+    transform: rotate(-90deg);
+    pointer-events: none;
+  }
+  .speed-ring-track { fill: none; stroke: rgba(0,229,255,0.14); stroke-width: 5; }
+  .speed-ring-fill {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 264;
+    stroke-dashoffset: 264;
+    transition: stroke-dashoffset 0.22s ease, stroke 0.22s ease;
+  }
+  .speed-val {
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    z-index: 1;
+    font-size: 1.85rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+  .speed-unit {
+    position: relative;
+    z-index: 1;
+    margin-top: 3px;
+    letter-spacing: 1.6px;
+  }
+  .speed-limit {
+    width: 38px;
+    height: 38px;
+    margin: 0;
+    border: 3px solid #e53935;
+    border-radius: 50%;
+    background: #fff;
+    color: #111;
+    font-size: 0.78rem;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
   .speed-live {
     display: block;
-    margin-top: 4px;
+    margin-top: 0;
     font-family: 'Courier New', monospace;
     font-size: 0.52rem;
     letter-spacing: 1.4px;
     color: var(--cyan);
+    background: rgba(6,13,20,0.88);
+    border: 1px solid var(--border);
+    padding: 3px 7px;
   }
   .sp-locate svg {
     width: 18px;
@@ -2830,14 +2956,16 @@ body {
     .sp-nav-dock { left: 10px; right: 10px; bottom: 8px; }
     .hud-nextturn { left: 10px; right: 10px; min-width: 0; bottom: 128px; }
     .hud-speed {
-      display: block;
+      display: flex;
       top: 10px;
       right: 10px;
       bottom: auto;
-      padding: 8px 10px;
-      min-width: 72px;
+      padding: 0;
+      min-width: 0;
     }
-    .speed-val { font-size: 1.6rem; }
+    .speed-dial { width: 84px; height: 84px; }
+    .speed-val { font-size: 1.55rem; }
+    .speed-limit { width: 34px; height: 34px; font-size: 0.7rem; }
     .hud-radar-time { display: none; }
     .sp-toast { white-space: normal; max-width: calc(100% - 24px); text-align: center; }
   }
@@ -2861,14 +2989,14 @@ body {
   </div>
   <div class="topbar-center">
     <!-- PATCH: DRIVER / MAP / WEATHER navigation -->
-    <button class="mode-btn active" id="nav-btn-driver"  onclick="switchScreen('driver')">⬤ DRIVER</button>
-    <button class="mode-btn"        id="nav-btn-map"     onclick="switchScreen('map')">MAP</button>
+    <button class="mode-btn" id="nav-btn-driver" onclick="switchScreen('driver')">⬤ DRIVER</button>
+    <button class="mode-btn active" id="nav-btn-map" onclick="switchScreen('map')">MAP</button>
     <button class="mode-btn"        id="nav-btn-weather" onclick="switchScreen('weather')">WEATHER</button>
     <button class="mode-btn"        id="nav-btn-settings" onclick="switchScreen('settings')">SETTINGS</button>
   </div>
   <div class="topbar-right">
-    <div class="status-item"><div class="status-dot"></div> GPS SIMULATED</div>
-    <div class="status-item"><div class="status-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div> RADAR SIMULATED</div>
+    <div class="status-item"><div class="status-dot" id="top-gps-dot"></div><span id="top-gps-label">GPS ACQUIRING</span></div>
+    <div class="status-item"><div class="status-dot" id="top-radar-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div><span id="top-radar-label">RADAR WAITING</span></div>
     <div class="alert-badge" id="wx-radar-status-badge">⚠ AWAITING GPS FIX</div>
     <div id="clock" style="font-family:'Courier New',monospace;font-size:0.72rem;color:var(--cyan-dim)">--:--:--</div>
   </div>
@@ -2877,7 +3005,7 @@ body {
 <!-- ════════════════════════════════════════════════
      SCREEN 1: DRIVER
      ════════════════════════════════════════════════ -->
-<div id="screen-driver" class="sp-screen active state-safe">
+<div id="screen-driver" class="sp-screen state-safe">
 <div class="sp-screen-title" aria-hidden="true">DRIVER</div>
 
   <div class="sp-statebar">
@@ -2900,6 +3028,15 @@ body {
     <div class="sp-reason" id="sp-reason-text">
       Source data is low-confidence, conflicting, or stale. Storm Path has reduced complexity and increased conservatism.
     </div>
+    <div class="sp-home-lead" id="sp-home-lead">
+      <div class="sp-home-kicker">READY</div>
+      <h2 class="sp-home-title">You're on the map</h2>
+      <p class="sp-home-copy">Your marker stays on your GPS — same as every other navigation app. Search a town, state, or address, then Start Drive. It only moves when you do.</p>
+      <div class="sp-home-stats">
+        <span id="sp-home-gps">GPS ACQUIRING</span>
+        <span id="sp-home-spd">0 MPH</span>
+      </div>
+    </div>
 
     <div class="sp-driver-search">
       <button type="button" class="sp-search-pill" id="sp-driver-search" aria-label="Set destination">
@@ -2912,6 +3049,7 @@ body {
     </div>
 
     <div id="sp-driver-trip" class="sp-driver-trip">
+      <div id="sp-trip-live">
       <div class="section-label">TIME TO ARRIVE</div>
       <div class="sp-clock-row" id="sp-clock-row">
         <div class="sp-clock-cell"><b id="sp-eta-d">0</b><span>DAYS</span></div>
@@ -2935,6 +3073,7 @@ body {
         </div>
       </div>
       <div id="sp-route-host"></div>
+      </div>
       <div class="section-label">PLANNED DRIVES</div>
       <div id="sp-plan-list"></div>
     </div>
@@ -2964,7 +3103,7 @@ body {
 <!-- ════════════════════════════════════════════════
      SCREEN 2: MAP
      ════════════════════════════════════════════════ -->
-<div id="screen-map" class="sp-screen sp-map-clean">
+<div id="screen-map" class="sp-screen sp-map-clean active">
 <div class="sp-screen-title" aria-hidden="true">MAP</div>
   <div class="map-screen-inner">
 
@@ -3126,10 +3265,16 @@ body {
         </div>
       </div>
 
-      <div class="hud-speed">
-        <div class="speed-val" id="speed-display">--</div>
-        <div class="speed-unit" id="speed-unit">MPH</div>
-        <div class="speed-limit" id="speed-limit">--</div>
+      <div class="hud-speed" id="hud-speed">
+        <div class="speed-dial">
+          <svg class="speed-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="speed-ring-track" cx="50" cy="50" r="42"></circle>
+            <circle class="speed-ring-fill" id="speed-ring-fill" cx="50" cy="50" r="42"></circle>
+          </svg>
+          <div class="speed-val" id="speed-display">--</div>
+          <div class="speed-unit" id="speed-unit">MPH</div>
+        </div>
+        <div class="speed-limit" id="speed-limit" title="Posted speed limit">--</div>
         <span class="speed-live" id="speed-live">GPS SPEED</span>
       </div>
 
@@ -3623,7 +3768,7 @@ function acceptReroute() {
 // ────────────────────────────────────────────────
 //  PATCH: SCREEN SWITCHING — single source of truth
 // ────────────────────────────────────────────────
-let activeScreen = 'driver';
+let activeScreen = 'map';
 let animFrame = null;
 
 // ── V1.3.5 REPAIR 2: switchScreen — one-active-screen invariant ──
@@ -3943,6 +4088,18 @@ function spBuildRadarUrl(lat, lon) {
 function spSetRadarStatus(text) {
   const el = document.getElementById('radar-time');
   if (el) el.textContent = text;
+  const top = document.getElementById('top-radar-label');
+  const dot = document.getElementById('top-radar-dot');
+  if (top) {
+    const live = /LIVE/i.test(text);
+    const bad = /UNAVAILABLE|FAIL/i.test(text);
+    top.textContent = live ? 'RADAR LIVE' : (bad ? 'RADAR UNAVAILABLE' : 'RADAR WAITING');
+    if (dot) {
+      const color = live ? 'var(--green-safe)' : (bad ? 'var(--red-alert)' : 'var(--amber)');
+      dot.style.background = color;
+      dot.style.boxShadow = '0 0 8px ' + color;
+    }
+  }
 }
 
 function spApplyRadarImage(url) {
@@ -4430,6 +4587,7 @@ function spSetState(stateKey) {
     if (fallbackBox) fallbackBox.classList.remove('sp-fade');
 
     if (activeScreen === 'weather') syncWeatherPanel();
+    if (typeof spSyncTripChrome === 'function') spSyncTripChrome();
   };
 
   apply();
@@ -4670,9 +4828,8 @@ function runStartupSafetyChecks() {
   const screen = document.getElementById('screen-driver');
   if (!screen) return; // avoid uncaught exception if DOM missing
 
-  if (!screen.classList.contains('active')) screen.classList.add('active');
   if (!screen.classList.contains('state-safe')) {
-    screen.className = (screen.className.replace(/\bstate-\w+\b/g, '').trim() + ' state-safe');
+    screen.className = (screen.className.replace(/\bstate-\w+\b/g, '').replace(/\bactive\b/g, '').trim() + ' state-safe');
   }
   const stateLabel = document.getElementById('sp-state-label');
   if (stateLabel) stateLabel.textContent = data.label;
@@ -4710,8 +4867,6 @@ function runStartupSafetyChecks() {
 
   const activeDevButton = document.getElementById('sp-btn-safe');
   if (activeDevButton) activeDevButton.classList.add('active-state');
-
-  // DRIVER is active at startup. MAP and WEATHER loops remain lazy-loaded.
 })();
 
 // ────────────────────────────────────────────────
@@ -4724,6 +4879,11 @@ function runStartupSafetyChecks() {
 let spCoords = { lat: null, lon: null, accuracy: null, speedMps: null, heading: null };
 let spGPSAvailable = false;
 let spGPSWatchId = null;
+let spFixPrev = { lat: null, lon: null, t: 0 };
+let spSpeedEma = 0;
+let spAccepted = { lat: null, lon: null };
+let spStillTicks = 0;
+const SP_STILL_MPS = 0.45;
 
 // Anchor point for projecting real GPS deltas onto the illustrative
 // (non-geo-referenced) map canvas. Matches the prototype's original
@@ -4752,10 +4912,16 @@ function spGeoToCanvasOffset(lat, lon, zoom) {
 }
 
 function spSetGPSStatus(label, color) {
-  const dot = document.getElementById('gps-status-dot');
-  const lbl = document.getElementById('gps-status-label');
-  if (dot) { dot.style.background = color; dot.style.boxShadow = '0 0 8px ' + color; }
-  if (lbl) lbl.textContent = label;
+  const dots = ['gps-status-dot', 'top-gps-dot'];
+  const labels = ['gps-status-label', 'top-gps-label', 'sp-home-gps'];
+  dots.forEach(id => {
+    const dot = document.getElementById(id);
+    if (dot) { dot.style.background = color; dot.style.boxShadow = '0 0 8px ' + color; }
+  });
+  labels.forEach(id => {
+    const lbl = document.getElementById(id);
+    if (lbl) lbl.textContent = label;
+  });
 }
 
 function spUpdateCoordsDisplay() {
@@ -4773,16 +4939,70 @@ function spUpdateCoordsDisplay() {
 
 function spOnPositionSuccess(pos) {
   const hadFixBefore = spGPSAvailable;
-  spCoords.lat = pos.coords.latitude;
-  spCoords.lon = pos.coords.longitude;
-  spCoords.accuracy = pos.coords.accuracy;
-  spCoords.speedMps = (typeof pos.coords.speed === 'number' && isFinite(pos.coords.speed) && pos.coords.speed >= 0)
-    ? pos.coords.speed
-    : (spCoords.speedMps == null ? 0 : spCoords.speedMps);
-  spCoords.heading = (typeof pos.coords.heading === 'number') ? pos.coords.heading : spCoords.heading;
+  const c = pos.coords;
+  const t = pos.timestamp || Date.now();
+  const rawLat = c.latitude, rawLon = c.longitude;
+  let chip = (typeof c.speed === 'number' && isFinite(c.speed) && c.speed >= 0) ? c.speed : null;
+  let derived = null;
+  if (spFixPrev.t && t > spFixPrev.t) {
+    const dt = (t - spFixPrev.t) / 1000;
+    if (dt >= 0.2 && dt <= 8) {
+      derived = (spHaversineMi(spFixPrev.lat, spFixPrev.lon, rawLat, rawLon) * 1609.344) / dt;
+    }
+  }
+  let mps;
+  if (chip != null) {
+    mps = chip;
+    spStillTicks = chip < SP_STILL_MPS ? spStillTicks + 1 : 0;
+  } else if (derived != null) {
+    if (derived < SP_STILL_MPS) {
+      spStillTicks += 1;
+      mps = spStillTicks >= 3 ? 0 : (spSpeedEma || 0);
+    } else {
+      spStillTicks = 0;
+      mps = derived;
+    }
+  } else {
+    mps = spSpeedEma || 0;
+  }
+  if (c.accuracy > 85 && chip == null) mps = spSpeedEma || 0;
+  if (mps < SP_STILL_MPS) {
+    mps = 0;
+    spSpeedEma = 0;
+  } else if (mps > 70) {
+    mps = spSpeedEma || 0;
+  } else {
+    spSpeedEma = spSpeedEma ? (spSpeedEma * 0.62 + mps * 0.38) : mps;
+    mps = spSpeedEma;
+  }
+  spCoords.speedMps = mps;
+  let heading = (typeof c.heading === 'number' && isFinite(c.heading) && mps >= SP_STILL_MPS) ? c.heading : null;
+  if (heading == null && mps >= 1 && spFixPrev.lat != null) {
+    heading = spBearing(spFixPrev.lat, spFixPrev.lon, rawLat, rawLon);
+  }
+  if (heading != null) spCoords.heading = heading;
+  spFixPrev = { lat: rawLat, lon: rawLon, t: t };
+
+  let lat = rawLat, lon = rawLon;
+  if (!spAccepted.lat) {
+    spAccepted = { lat: rawLat, lon: rawLon };
+  } else if (spCoords.speedMps < SP_STILL_MPS) {
+    const jumpM = spHaversineMi(spAccepted.lat, spAccepted.lon, rawLat, rawLon) * 1609.344;
+    const gate = Math.max(18, Math.min(60, c.accuracy || 25));
+    if (jumpM > gate) spAccepted = { lat: rawLat, lon: rawLon };
+    lat = spAccepted.lat;
+    lon = spAccepted.lon;
+  } else {
+    spAccepted = { lat: rawLat, lon: rawLon };
+  }
+
+  spCoords.lat = lat;
+  spCoords.lon = lon;
+  spCoords.accuracy = c.accuracy;
   spGPSAvailable = true;
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
   spUpdateCoordsDisplay();
+  spApplyGpsToMarker();
   spPaintSpeed();
   spTickTrip();
   spMaybeSpeedLimit();
@@ -4833,7 +5053,6 @@ function spInitGeolocation() {
   spGPSWatchId = navigator.geolocation.watchPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
 }
 
-spInitGeolocation();
 spRecomputeState();
 
 // ────────────────────────────────────────────────
@@ -5470,55 +5689,81 @@ function spStartNavLoop() {
   spNavRaf = requestAnimationFrame(loop);
 }
 
+function spSyncTripChrome() {
+  const d = document.getElementById('screen-driver');
+  if (!d) return;
+  let nav = false;
+  try { nav = !!spNavActive; } catch (e) { nav = false; }
+  d.classList.toggle('is-trip', nav);
+  d.classList.toggle('is-alert', spCurrentState === 'danger' || spCurrentState === 'stop');
+}
+
+function spApplyGpsToMarker() {
+  if (!(spGPSAvailable && spCoords.lat != null)) return;
+  let lat = spCoords.lat, lon = spCoords.lon;
+  const moving = (spCoords.speedMps || 0) >= SP_STILL_MPS;
+  let heading = (typeof spCoords.heading === 'number' && isFinite(spCoords.heading)) ? spCoords.heading : (spNav.heading || 0);
+  if (spNavActive && spNav.pts.length) {
+    if (moving) {
+      const snapM = spSnapToPath(lat, lon);
+      const p = spPointAt(snapM);
+      if (p && spHaversineMi(lat, lon, p.lat, p.lon) < 0.12) {
+        lat = p.lat;
+        lon = p.lon;
+        heading = p.heading;
+        spNav.meters = snapM;
+        spNav.heading = heading;
+      }
+    } else {
+      const p = spPointAt(spNav.meters);
+      if (p && spHaversineMi(lat, lon, p.lat, p.lon) < 0.12) {
+        lat = p.lat;
+        lon = p.lon;
+        heading = p.heading || heading;
+        spNav.heading = heading;
+      }
+    }
+  }
+  spNav.mps = spCoords.speedMps || 0;
+  spNav.goal = { lat: lat, lon: lon, heading: heading };
+  spPlaceNavMarker(lat, lon, heading);
+  if (spLeaflet && spFollowGps) {
+    if (!spDidFlyToGps) {
+      spDidFlyToGps = true;
+      spLeaflet.setView([lat, lon], 14, { animate: true });
+      spRefreshLeafletRadar();
+    } else if (spNavActive && moving) {
+      const z = spNavZoom(spNav.mps);
+      const cur = spLeaflet.getZoom();
+      spLeaflet.setView([lat, lon], Math.abs(cur - z) >= 1 ? z : cur, { animate: false });
+    }
+  }
+  if (spNavActive) {
+    const p = spPointAt(spNav.meters);
+    if (p) spPaintRemainingRoute(p.idx);
+    spRefreshNavHud();
+  }
+}
+
 function spAdvanceNav(ts) {
-  if (!spNav.pts.length) return;
-  if (!spNav.lastTs) spNav.lastTs = ts;
-  const dt = Math.min(0.08, Math.max(0, (ts - spNav.lastTs) / 1000));
-  spNav.lastTs = ts;
-  if (spNav.arrived) return;
-
-  const gpsMph = spSpeedMph();
-  let mps;
-  const snap = (spGPSAvailable && spCoords.lat != null) ? spSnapToPath(spCoords.lat, spCoords.lon) : spNav.meters;
-  const gpsMoved = Math.abs(snap - (spNav.lastSnap || 0)) > 2.5;
-  spNav.lastSnap = snap;
-  if (gpsMoved && Math.abs(snap - spNav.meters) < 120) {
-    mps = Math.max(gpsMph, 3) / 2.236936292;
-    spNav.meters += (snap - spNav.meters) * Math.min(1, dt * 4);
-  } else {
-    mps = gpsMph >= 3.5 ? (gpsMph / 2.236936292) : spNav.typicalMps;
-    spNav.meters += mps * dt;
+  if (!spGpsMarker || !spNav.goal) return;
+  const g = spNav.goal;
+  const moving = (spCoords.speedMps || 0) >= SP_STILL_MPS;
+  if (!moving) {
+    const cur = spGpsMarker.getLatLng();
+    if (Math.hypot(g.lat - cur.lat, g.lon - cur.lng) > 1e-7) {
+      spGpsMarker.setLatLng([g.lat, g.lon]);
+      spRotateVehicle(g.heading);
+    }
+    return;
   }
-  if (spNav.meters < 0) spNav.meters = 0;
-  if (spNav.meters > spNav.total) spNav.meters = spNav.total;
-  spNav.mps = mps;
-
-  const p = spPointAt(spNav.meters);
-  if (!p) return;
-  spNav.heading = p.heading;
-  spPlaceNavMarker(p.lat, p.lon, p.heading);
-
-  if (spFollowGps && spLeaflet && (ts - spNav.lastPan > 110)) {
-    spNav.lastPan = ts;
-    const z = spNavZoom(mps);
-    const cur = spLeaflet.getZoom();
-    const zoom = Math.abs(cur - z) >= 1 ? z : cur;
-    spLeaflet.setView([p.lat, p.lon], zoom, { animate: false });
-  }
-
-  if (ts - spNav.lastHud > 180) {
-    spNav.lastHud = ts;
-    spPaintRemainingRoute(p.idx);
-    spRefreshNavHud();
-    spPaintSpeed();
-  }
-
-  if (!spNav.arrived && spNav.meters >= spNav.total - 10) {
-    spNav.arrived = true;
-    spNav.meters = spNav.total;
-    spRefreshNavHud();
-    spToast('ARRIVED');
-  }
+  const cur = spGpsMarker.getLatLng();
+  const dlat = g.lat - cur.lat;
+  const dlon = g.lon - cur.lng;
+  if (Math.hypot(dlat, dlon) < 1e-8) return;
+  const k = 0.32;
+  spGpsMarker.setLatLng([cur.lat + dlat * k, cur.lng + dlon * k]);
+  spRotateVehicle(g.heading);
 }
 
 function spSyncLiveMap() {
@@ -5536,8 +5781,6 @@ function spSyncLiveMap() {
     spFollowGps = true;
     spLeaflet.setView(latlng, 14, { animate: true });
     spRefreshLeafletRadar();
-  } else if (spFollowGps) {
-    spLeaflet.panTo(latlng, { animate: true, duration: 0.35 });
   }
 }
 
@@ -5798,7 +6041,8 @@ function spHaversineMi(aLat, aLon, bLat, bLon) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
-async function spGoDestination() {
+async function spGoDestination(placeArg) {
+  if (placeArg) spPendingPlace = placeArg;
   if (!spPendingPlace) return;
   const place = spPendingPlace;
   const btn = document.getElementById('sp-go-btn');
@@ -5964,7 +6208,7 @@ async function spRouteTo(place) {
   spNav.arrived = false;
   spNav.steps = usable;
   spNav.typicalMps = (route.duration > 0) ? Math.max(6, Math.min(31, route.distance / route.duration)) : 13.4;
-  spNav.mps = spNav.typicalMps;
+  spNav.mps = spCoords.speedMps || 0;
   spNav.lastTs = 0;
   spNav.lastPan = 0;
   spNav.lastHud = 0;
@@ -5974,25 +6218,24 @@ async function spRouteTo(place) {
   spNavActive = true;
   document.getElementById('nextturn-hud')?.classList.add('is-nav');
   document.getElementById('sp-end-drive')?.classList.add('show');
-  const start = spPointAt(spNav.meters);
-  if (start) spPlaceNavMarker(start.lat, start.lon, start.heading);
+  spApplyGpsToMarker();
   spRefreshNavHud();
   spTickTrip();
+  spSyncTripChrome();
   spStartNavLoop();
 
-  if (spLeaflet && start) {
+  if (spLeaflet && spGPSAvailable && spCoords.lat != null) {
     if (spNav.total > 40000) {
       spFollowGps = false;
       spLeaflet.fitBounds(L.latLngBounds(coords).pad(0.12), { animate: true });
       setTimeout(() => {
         if (!spNavActive || !spLeaflet) return;
         spFollowGps = true;
-        const p = spPointAt(spNav.meters);
-        if (p) spLeaflet.setView([p.lat, p.lon], 16, { animate: true });
+        spLeaflet.setView([spCoords.lat, spCoords.lon], 16, { animate: true });
       }, 1100);
     } else {
       spFollowGps = true;
-      spLeaflet.setView([start.lat, start.lon], 16, { animate: true });
+      spLeaflet.setView([spCoords.lat, spCoords.lon], 16, { animate: true });
     }
   } else {
     spFollowGps = true;
@@ -6242,9 +6485,7 @@ function spSpeedMph() {
 }
 function spUseMetric() { return spGetSet().units === 'kmh'; }
 function spPaintSpeed() {
-  const gpsMph = spSpeedMph();
-  const navMph = (spNavActive && spNav.mps > 0) ? spNav.mps * 2.236936292 : 0;
-  const mph = gpsMph >= 3.5 ? gpsMph : (navMph || gpsMph);
+  const mph = spSpeedMph();
   const metric = spUseMetric();
   const shown = metric ? mph * 1.60934 : mph;
   const unit = metric ? 'KM/H' : 'MPH';
@@ -6252,26 +6493,30 @@ function spPaintSpeed() {
   const un = document.getElementById('speed-unit');
   const lim = document.getElementById('speed-limit');
   const live = document.getElementById('speed-live');
+  const ring = document.getElementById('speed-ring-fill');
+  const homeSpd = document.getElementById('sp-home-spd');
   if (un) un.textContent = unit;
   if (el) {
-    el.textContent = (spGPSAvailable || spNavActive) ? String(Math.round(shown)) : '--';
+    el.textContent = spGPSAvailable ? String(Math.round(shown)) : '--';
     const cap = spSpeedLimitMph;
     el.style.color = (cap && mph > cap * 1.08) ? 'var(--red-alert)' : 'var(--amber)';
   }
-  if (live) {
-    if (!spGPSAvailable && !spNavActive) live.textContent = 'WAITING';
-    else if (gpsMph >= 3.5) live.textContent = 'GPS SPEED';
-    else if (spNavActive) live.textContent = 'ON ROUTE';
-    else live.textContent = 'GPS SPEED';
-  }
+  if (live) live.textContent = spGPSAvailable ? 'GPS SPEED' : 'WAITING';
+  if (homeSpd) homeSpd.textContent = (spGPSAvailable ? Math.round(shown) : 0) + ' ' + unit;
   if (lim) {
     lim.style.display = spGetSet().limit === false ? 'none' : 'flex';
     if (spSpeedLimitMph == null) lim.textContent = '--';
     else lim.textContent = String(Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph));
   }
+  if (ring) {
+    const cap = spSpeedLimitMph || (metric ? 120 : 80);
+    const pct = Math.max(0, Math.min(1, shown / cap));
+    ring.style.strokeDashoffset = String(264 * (1 - pct));
+    ring.style.stroke = (spSpeedLimitMph && mph > spSpeedLimitMph * 1.08) ? 'var(--red-alert)' : 'var(--amber)';
+  }
   const tripSpd = document.getElementById('sp-trip-spd');
   const tripLim = document.getElementById('sp-trip-lim');
-  if (tripSpd) tripSpd.textContent = Math.round(shown) + ' ' + unit;
+  if (tripSpd) tripSpd.textContent = (spGPSAvailable ? Math.round(shown) : 0) + ' ' + unit;
   if (tripLim) tripLim.textContent = spSpeedLimitMph == null ? '--' : (Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph) + ' ' + unit);
 }
 
@@ -6362,8 +6607,7 @@ function spTickTrip() {
   }
   const remainM = spRemainMeters();
   const delayS = spConstructionDelayS();
-  const gpsMph = spSpeedMph();
-  const mph = gpsMph >= 3.5 ? gpsMph : (spNav.mps * 2.236936292);
+  const mph = spSpeedMph();
   let remainS;
   if (mph >= 3.5) remainS = (remainM / 1609.344) / mph * 3600 + delayS;
   else {
@@ -6415,6 +6659,7 @@ function spEndDrive() {
     if (spLeaflet && spFollowGps) spLeaflet.setView([spCoords.lat, spCoords.lon], 14, { animate: true });
   }
   spTickTrip();
+  spSyncTripChrome();
   spToast('DRIVE ENDED');
 }
 
@@ -6773,6 +7018,27 @@ function spBindNavUi() {
   zoomOut = function() { if (spLeaflet) spLeaflet.zoomOut(); else _zo(); };
 })();
 
+function spSnapState() {
+  try {
+    const ll = spGpsMarker && spGpsMarker.getLatLng && spGpsMarker.getLatLng();
+    return {
+      lat: ll ? ll.lat : null,
+      lon: ll ? ll.lng : null,
+      meters: spNav ? spNav.meters : 0,
+      mps: spCoords.speedMps,
+      navMps: spNav ? spNav.mps : 0,
+      nav: !!spNavActive,
+      pts: (spNav && spNav.pts) ? spNav.pts.length : 0,
+      typical: spNav ? spNav.typicalMps : 0,
+      mph: typeof spSpeedMph === 'function' ? spSpeedMph() : 0,
+      leaflet: !!spLeaflet,
+      accepted: spAccepted ? { lat: spAccepted.lat, lon: spAccepted.lon } : null
+    };
+  } catch (e) {
+    return { lat: null, lon: null, meters: 0, mps: 0, navMps: 0, nav: false, pts: 0, typical: 0, mph: 0, leaflet: false, accepted: null, err: String(e) };
+  }
+}
+
 function spBootNav() {
   spBindNavUi();
   spMountTripBoard();
@@ -6781,9 +7047,14 @@ function spBootNav() {
   spRenderPlans();
   spPaintSettings();
   spPaintSpeed();
+  spSyncTripChrome();
   spFillTurns([], 'Set a destination to load live turn-by-turn.');
   spUpdateNextTurn(null);
   setInterval(spTickTrip, 1000);
+  requestAnimationFrame(() => {
+    try { spEnsureLeaflet(); } catch (e) {}
+    try { spInitGeolocation(); } catch (e) {}
+  });
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', spBootNav);
