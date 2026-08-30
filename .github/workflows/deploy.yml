@@ -16,10 +16,11 @@ concurrency:
 
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+      url: ${{ steps.deployment.outputs.page_url || steps.pages.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,14 +31,37 @@ jobs:
           cp index.html StormpathV1_3_5.html 404.html .nojekyll _site/
           cp -R intel vehicles _site/
 
+      - name: Read Pages configuration
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          info=$(gh api "repos/${{ github.repository }}/pages")
+          echo "$info"
+          bt=$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("build_type") or "")')
+          url=$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("html_url") or "")')
+          branch=$(printf '%s' "$info" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(((d.get("source") or {}).get("branch")) or "")')
+          echo "build_type=$bt" >> "$GITHUB_OUTPUT"
+          echo "page_url=$url" >> "$GITHUB_OUTPUT"
+          echo "source_branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "Pages build_type=${bt} source_branch=${branch} url=${url}"
+
       - name: Setup Pages
+        if: steps.pages.outputs.build_type == 'workflow'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
+        if: steps.pages.outputs.build_type == 'workflow'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
       - name: Deploy to GitHub Pages
+        if: steps.pages.outputs.build_type == 'workflow'
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Legacy branch source notice
+        if: steps.pages.outputs.build_type != 'workflow'
+        run: |
+          echo "::notice::GitHub Pages is still Deploy-from-a-branch (${{ steps.pages.outputs.source_branch }}). actions/deploy-pages is skipped so this job does not hang. Switch Settings → Pages → Source to GitHub Actions to activate artifact deploy. Live URL: ${{ steps.pages.outputs.page_url }}"

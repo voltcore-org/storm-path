@@ -27,7 +27,7 @@ Open `/` (serves `index.html`). Assets live in `intel/` and `vehicles/`.
 
 ## Deploy
 
-Push to `main`. `.github/workflows/deploy.yml` publishes the static tree to GitHub Pages. No tokens, no build step, no paid hosting.
+Push to `main`. `.github/workflows/deploy.yml` publishes the static tree to GitHub Pages once Settings → Pages → Source is **GitHub Actions**. Until that switch, the live hostname is served from branch `claude/real-radar-imagery-dogwdt` (currently fast-forwarded to the hardened tree). No tokens, no build step, no paid hosting.
 
 ## Files
 
@@ -37,5 +37,6 @@ Push to `main`. `.github/workflows/deploy.yml` publishes the static tree to GitH
 | `StormpathV1_3_5.html` | Canonical application source (same payload as `index.html`) |
 | `intel/` `vehicles/` | Marker artwork |
 | `.github/workflows/deploy.yml` | Pages pipeline |
+| `STORM-PATH-WEB-DEPLOYMENT-REPORT.md` | Hardening + deploy audit |
 
 User-Agent for `api.weather.gov`: identify the app and a contact mailbox. No API keys.

@@ -5,12 +5,13 @@
 | Project workspace | storm-path |
 | Target repository | [dominiccalandro1991-byte/storm-path](https://github.com/dominiccalandro1991-byte/storm-path) |
 | Audited production tree (input) | `0093e9417bc199e9ee96e039af75853bed6e6713` |
-| Primary branch after this sprint | `main` |
+| Hardened commit | `fa2ffc77be3d893c4ae85fdf55657bb12417e4c3` |
+| Production `main` HEAD | `e4d8b92e7801a3d593a2b824f035adc563ad9488` (merge of [PR #5](https://github.com/dominiccalandro1991-byte/storm-path/pull/5)) |
 | Live GitHub Pages URL | [https://dominiccalandro1991-byte.github.io/storm-path/](https://dominiccalandro1991-byte.github.io/storm-path/) |
 | Pipeline | `.github/workflows/deploy.yml` (GitHub Actions → GitHub Pages) |
 | Cost model | Zero paid tiers. Public NOAA / NWS / OSM / OSRM / Carto endpoints only. |
 | Sprint date | 2026-08-30 |
-| Evidence basis | Divergence audit `STORM-PATH-HEAD-INSPECTION-DIVERGENCE-AUDIT.md` + source mutation of `StormpathV1_3_5.html` at the audited SHA, then production-branch packaging. |
+| Evidence basis | Divergence audit `STORM-PATH-HEAD-INSPECTION-DIVERGENCE-AUDIT.md` + source mutation of `StormpathV1_3_5.html` at the audited SHA, then production-branch packaging and live URL verification. |
 
 This sprint executed the remediations named in §3 of the HEAD inspection audit. Immutable core names (`SP_STATES`, `spSetState`, `spValidateConfidence`, `spNormalizeSourceStatuses`, `switchScreen`, `spFetchWeather`, `spEvaluateAlertState`, `spClassifyAlert`) were not renamed or removed. Screen visibility remains owned exclusively by `switchScreen`. Prototype-only sources still cannot produce HIGH/MEDIUM confidence. NWS and radar are still gated on a live GPS fix.
 
@@ -20,12 +21,29 @@ This sprint executed the remediations named in §3 of the HEAD inspection audit.
 
 | Before | After |
 |---|---|
-| `main` at `63916cfd` (133260-byte HTML only) | `main` receives the audited 0093e941 product line **plus** enterprise hardening, `index.html` root mapping, `intel/` + `vehicles/`, and the Pages workflow |
-| Open PRs #3 and #4 both pointed at `0093e941` and were unmerged | Hardened tree is the production payload. PRs #3 / #4 are superseded by this delivery |
+| `main` at `63916cfd` (133260-byte HTML only) | `main` at `e4d8b92` — audited 0093e941 product line **plus** enterprise hardening, `index.html` root mapping, `intel/` + `vehicles/`, and the Pages workflow |
+| Open PRs #3 and #4 both pointed at `0093e941` and were unmerged | [PR #5](https://github.com/dominiccalandro1991-byte/storm-path/pull/5) merged. GitHub then recorded #3 and #4 as merged because their commits are now on `main` |
 
-GitHub Pages is configured as an **Actions** build (`build_type: workflow`). A push to `main` stages `index.html`, `StormpathV1_3_5.html`, `404.html`, `.nojekyll`, `intel/`, and `vehicles/` into `_site` and publishes with `actions/deploy-pages`. No FTP, no Vercel token, no paid CDN.
+Root URL serves `index.html` (byte-identical to the hardened `StormpathV1_3_5.html`, 258604 bytes). `404.html` is the same payload so a deep-link miss still boots the app.
 
-Root URL serves `index.html` (byte-identical to the hardened `StormpathV1_3_5.html` at ship time). `404.html` is the same payload so a deep-link miss still boots the app.
+### 1.1 Live Pages status (verified 2026-08-30T07:56Z)
+
+GET `https://dominiccalandro1991-byte.github.io/storm-path/` → **HTTP 200**, 258604 bytes, title `STORMPATH V1.3.5 — Navigation × Weather Intelligence`.
+
+| Probe | Result |
+|---|---|
+| `#wx-conf-mirror` | `N/A UNKNOWN` |
+| `#wx-state-mirror` | `SAFE MODE` |
+| `96% HIGH` | Absent |
+| `spPromoteLiveSource` | Present |
+| `spPatchMapHooks` | Absent |
+| `intel/unit.png` / `vehicles/bolt.png` / `404.html` | HTTP 200 |
+
+The repository already had Pages enabled as **legacy / Deploy from a branch** with source `claude/real-radar-imagery-dogwdt` (the 0093e941 radar line). The GitHub App token used by this sprint **cannot** change `build_type` (REST `PUT /pages` returns 403). To ship the hardened tree to the already-live hostname without waiting on that admin permission, `claude/real-radar-imagery-dogwdt` was fast-forwarded `0093e941 → fa2ffc77`. Legacy workflow [pages build and deployment #33300372462](https://github.com/dominiccalandro1991-byte/storm-path/actions/runs/33300372462) succeeded; the root URL flipped from 404 (no `index.html` on the old tree) to 200.
+
+The official Actions pipeline `.github/workflows/deploy.yml` is on `main` and uses `actions/checkout` → stage `_site` → `configure-pages` → `upload-pages-artifact` → `deploy-pages` **when** Pages `build_type` is `workflow`. Until Settings → Pages → Source is switched to GitHub Actions, that last step is skipped (a hang was observed on `deploy-pages` against the legacy site). The `github-pages` environment branch policy now includes `main` (policy id `58609316`), so flipping the source is a one-click operator action, not a code change.
+
+No FTP, no Vercel token, no paid CDN.
 
 ---
 
@@ -70,7 +88,7 @@ Static `SP_STATES[*].sources` maps remain prototype so startup validation stays 
 |---|---|
 | `#wx-state-mirror` = `NORMAL`, `#wx-conf-mirror` = `96% HIGH` | Initial text `SAFE MODE` / `N/A UNKNOWN` |
 | 4-second simulated reroute `setTimeout` | Removed (CSS hide was not a control-flow fix) |
-| `spEsc` mapped `& < > "` to themselves | Entity table now `& < > " &#39;` |
+| `spEsc` mapped `& < > "` to themselves | Entity table now `&` `<` `>` `"` `&#39;` |
 | `spRecentRowHtml` stuffed `JSON.stringify(place)` into a single-quoted attribute | Rows built with `createElement` + `textContent` + click closure |
 
 ### 2.5 Zero-allocation hot loops
@@ -158,7 +176,11 @@ These are implementation facts in the shipped source. They are listed here so co
 
 Geolocation requires a secure context (HTTPS or localhost). GitHub Pages is HTTPS. Desktop browsers without a GPS chip will time out into SAFE MODE; that is correct conservative behavior, not a defect.
 
-**Ship a change:** edit `StormpathV1_3_5.html`, copy it to `index.html` (keep them identical), push `main`. The workflow publishes in a few minutes. Confirm the Actions run under the `github-pages` environment.
+**Ship a change:** edit `StormpathV1_3_5.html`, copy it to `index.html` (keep them identical), push `main`.
+
+Until Pages Source is GitHub Actions, also fast-forward the current Pages branch (`claude/real-radar-imagery-dogwdt`) to the same SHA — that is what the first live cut used. After the one-click switch (Settings → Pages → Source → GitHub Actions), every `main` push publishes via `deploy.yml` with no extra branch update.
+
+**One-click remaining (Pages admin, not code):** Settings → Pages → Source → GitHub Actions. The `github-pages` environment already allows `main`.
 
 **Zero-cost contract:** do not add a key-gated weather vendor, a paid tile plan, or a token in the HTML. If an origin starts requiring auth, drop that origin and keep SAFE MODE — do not bake a secret into the static file.
 
@@ -169,14 +191,18 @@ Geolocation requires a secure context (HTTPS or localhost). GitHub Pages is HTTP
 | Check | Result |
 |---|---|
 | `node --check` on the extracted application script | Pass |
+| Playwright desktop + mobile (title, one-active-screen, SAFE MODE / N/A UNKNOWN mirrors, zero pageerrors) | Pass |
 | `spWeatherFetchStarted` latch | Absent |
 | `spPatchMapHooks` wrapper | Absent |
-| `96% HIGH` initial mirror | Absent |
+| `96% HIGH` initial mirror | Absent (live HTML and local bundle) |
 | Per-frame `Math.random` in `drawMap` | Absent |
 | `JSON.stringify` place blobs in recent-row HTML | Absent |
-| `spEsc` entity table | `& < > " &#39;` |
-| `index.html` byte-identical to hardened `StormpathV1_3_5.html` at ship | Yes |
+| `spEsc` entity table | `&` `<` `>` `"` `&#39;` |
+| `index.html` byte-identical to hardened `StormpathV1_3_5.html` at ship | Yes (258604) |
 | Pages workflow present at `.github/workflows/deploy.yml` | Yes |
+| [PR #5](https://github.com/dominiccalandro1991-byte/storm-path/pull/5) merged to `main` | Yes — `e4d8b92` |
+| Live URL HTTP 200 with hardened payload | Yes — 2026-08-30T07:56:54Z |
+| Legacy pages-build-deployment | Success — run 33300372462 |
 
 Pressure / visibility / CAPE chips remain `N/A` because those fields are not on the NWS hourly period used by the decision engine. That is an explicit non-invention, not a silent zero.
 
@@ -184,4 +210,4 @@ Pressure / visibility / CAPE chips remain `N/A` because those fields are not on 
 
 ## 7. Close
 
-The audited 0093e941 product line is now the production static bundle, hardened against the divergence audit, rooted at `index.html`, and published by an automated GitHub Pages workflow on every `main` push. No paid infrastructure is required to keep it live.
+The audited 0093e941 product line is now the production static bundle on `main`, hardened against the divergence audit, rooted at `index.html`, and live at [https://dominiccalandro1991-byte.github.io/storm-path/](https://dominiccalandro1991-byte.github.io/storm-path/). The automated GitHub Pages workflow is in tree and will take over artifact deploys the moment Pages Source is set to GitHub Actions. No paid infrastructure is required to keep it live.
