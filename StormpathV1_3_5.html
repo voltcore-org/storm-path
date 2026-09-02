@@ -2978,6 +2978,24 @@ body {
   }
 
 </style>
+<script>
+(function(){
+  var SRC="storm-path";
+  var URL="https://core-api.dominic-calandro1991.workers.dev/api/v1/events";
+  function emit(type,severity,payload){
+    try{
+      fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:SRC,type:type,severity:severity,payload:payload||{}}),keepalive:true}).catch(function(){});
+    }catch(e){}
+  }
+  window.addEventListener("error",function(e){
+    emit("runtime.error","error",{message:String(e.message||""),filename:String(e.filename||""),lineno:e.lineno||0});
+  });
+  window.addEventListener("unhandledrejection",function(e){
+    emit("runtime.error","error",{reason:String(e.reason||"")});
+  });
+  emit("app.event","info",{status:"boot"});
+})();
+</script>
 </head>
 <body>
 
