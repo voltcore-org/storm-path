@@ -770,6 +770,26 @@
   }
 
   #miniRadar.hidden, #miniRadarWx.hidden { opacity: 0; }
+  .sp-nws-list {
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    min-height: 2.2em;
+  }
+  .sp-nws-row {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+  }
+  .sp-nws-sub {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 0.62rem;
+    line-height: 1.4;
+  }
 
   .scope-compass {
     position: absolute;
@@ -3085,7 +3105,7 @@ body {
       <div id="sp-plan-list"></div>
     </div>
 
-    <div class="sp-placeholder-badge" id="sp-placeholder-badge" style="display:none">PROTOTYPE DATA · SIMULATED · NOT LIVE</div>
+    <div class="sp-placeholder-badge" id="sp-placeholder-badge" style="display:none" aria-hidden="true"></div>
 
     <div class="sp-stop-banner">
       <div class="line-1">STOP</div>
@@ -3145,48 +3165,7 @@ body {
       <div class="panel-section sp-trip-block">
         <div class="section-label">TURN-BY-TURN</div>
         <div id="turns-list">
-          <div class="turn-item active">
-            <div class="turn-icon">↑</div>
-            <div class="turn-info">
-              <div class="turn-street">Continue on Oak Ave</div>
-              <div class="turn-dist">0.4 mi · Straight ahead</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">↰</div>
-            <div class="turn-info">
-              <div class="turn-street">Turn Left on Maple St</div>
-              <div class="turn-dist">1.2 mi · 3 min</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">↱</div>
-            <div class="turn-info">
-              <div class="turn-street">Turn Right on Hwy 101</div>
-              <div class="turn-dist">2.8 mi · 8 min</div>
-            </div>
-          </div>
-          <div class="turn-item" style="border-color:rgba(255,61,61,0.3);">
-            <div class="turn-icon" style="border-color:rgba(255,61,61,0.4);background:rgba(255,61,61,0.08);">⚡</div>
-            <div class="turn-info">
-              <div class="turn-street" style="color:var(--red-alert);">⚠ Storm Zone Ahead</div>
-              <div class="turn-dist">4.1 mi · Heavy precipitation</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">↱</div>
-            <div class="turn-info">
-              <div class="turn-street">Exit 24B — Central Blvd</div>
-              <div class="turn-dist">6.5 mi · 18 min</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">🏁</div>
-            <div class="turn-info">
-              <div class="turn-street">Arrive Downtown Station</div>
-              <div class="turn-dist">8.3 mi · 24 min</div>
-            </div>
-          </div>
+          <div class="turn-item"><div class="turn-info"><div class="turn-street">Set a destination to load turn-by-turn.</div><div class="turn-dist"></div></div></div>
         </div>
       </div>
 
@@ -3253,13 +3232,6 @@ body {
         <button class="zoom-btn" onclick="zoomOut()">−</button>
       </div>
 
-      <div class="hud-storm-warning sp-sim-hidden">
-        <span style="font-size:1.2rem">⚡</span>
-        <div>
-          <div class="warning-text">SIMULATED THUNDERSTORM SCENARIO</div>
-          <div class="warning-details">Prototype scenario · Simulated hail · Not a live warning</div>
-        </div>
-      </div>
 
       <div class="hud-nextturn" id="nextturn-hud">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -3287,14 +3259,7 @@ body {
 
       <div class="hud-radar-time" id="radar-time">RADAR · AWAITING GPS FIX</div>
 
-      <div class="reroute-popup" id="reroute-popup">
-        <div class="reroute-title">⚡ WEATHER REROUTE AVAILABLE</div>
-        <div class="reroute-desc">StormPath detected a severe cell crossing your route at mile 4.1. An alternate route avoids the storm with +6 min added time.</div>
-        <div class="reroute-btns">
-          <button class="reroute-btn accept" onclick="acceptReroute()">✓ ACCEPT +6 MIN</button>
-          <button class="reroute-btn dismiss" onclick="document.getElementById('reroute-popup').classList.remove('show')">DISMISS</button>
-        </div>
-      </div>
+      <div class="reroute-popup" id="reroute-popup" hidden></div>
 
       <div class="sp-nav-dock">
         <button type="button" class="sp-search-pill" id="sp-search-pill" aria-label="Set destination">
@@ -3327,95 +3292,22 @@ body {
               <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
             </div>
           </div>
-          <div class="scope-label">NWS BASE REFLECTIVITY — LIVE</div>
+          <div class="scope-label" id="scope-live-caption">NWS BASE REFLECTIVITY — LIVE<br><span style="opacity:.75;font-size:0.58rem;letter-spacing:0.5px;">Empty circle means no precipitation returns, not a missing radar.</span></div>
         </div>
       </div>
 
       <div class="panel-section" style="flex:1;">
-        <div class="section-label">TRACKED STORM CELLS (SIMULATED)</div>
-        <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--text-secondary);border:1px dashed var(--grid-line);padding:6px 8px;margin-bottom:10px;line-height:1.5;">
-          ⚠ ILLUSTRATIVE DEMO DATA ONLY — not real storm-cell tracking. Separate from the live NWS radar imagery above.
-        </div>
-        <div class="storm-cell danger" id="cell-A">
-          <div class="cell-header">
-            <span class="cell-id">CELL-A7</span>
-            <span class="cell-type severe">SUPERCELL</span>
-          </div>
-          <div class="cell-stats">
-            <div class="cell-stat">MOVEMENT<strong>NE 28mph</strong></div>
-            <div class="cell-stat">MAX dBZ<strong style="color:var(--red-alert)">68</strong></div>
-            <div class="cell-stat">HAIL<strong style="color:var(--red-alert)">1.25"</strong></div>
-            <div class="cell-stat">TOP<strong>42,500 ft</strong></div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:88%;background:var(--red-alert);"></div>
-          </div>
-          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--red-alert);margin-top:4px;">
-            ⚠ CROSSES ROUTE IN ~9 MIN
-          </div>
-        </div>
-
-        <div class="storm-cell warning" id="cell-B">
-          <div class="cell-header">
-            <span class="cell-id">CELL-B3</span>
-            <span class="cell-type moderate">MODERATE</span>
-          </div>
-          <div class="cell-stats">
-            <div class="cell-stat">MOVEMENT<strong>N 18mph</strong></div>
-            <div class="cell-stat">MAX dBZ<strong style="color:var(--amber)">52</strong></div>
-            <div class="cell-stat">HAIL<strong>NONE</strong></div>
-            <div class="cell-stat">TOP<strong>28,000 ft</strong></div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:55%;background:var(--amber);"></div>
-          </div>
-          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--amber);margin-top:4px;">
-            NEAR ROUTE — MONITOR
-          </div>
-        </div>
-
-        <div class="storm-cell" id="cell-C">
-          <div class="cell-header">
-            <span class="cell-id">CELL-C1</span>
-            <span class="cell-type light">LIGHT</span>
-          </div>
-          <div class="cell-stats">
-            <div class="cell-stat">MOVEMENT<strong>SE 12mph</strong></div>
-            <div class="cell-stat">MAX dBZ<strong style="color:var(--cyan)">32</strong></div>
-            <div class="cell-stat">HAIL<strong>NONE</strong></div>
-            <div class="cell-stat">TOP<strong>15,000 ft</strong></div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:25%;background:var(--cyan);"></div>
-          </div>
-          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim);margin-top:4px;">
-            OFF ROUTE — NO THREAT
-          </div>
-        </div>
+        <div class="section-label">NWS ALERTS</div>
+        <div id="sp-nws-alert-list" class="sp-nws-list">No GPS fix yet — alerts load after a live location.</div>
       </div>
 
       <div class="panel-section">
-        <div class="section-label">WEATHER IMPACT</div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
-            <span style="color:var(--text-secondary)">Current ETA</span>
-            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--amber)">24 min</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
-            <span style="color:var(--text-secondary)">Weather delay</span>
-            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--red-alert)">+12 min</span>
-          </div>
-          <div style="height:1px;background:var(--grid-line)"></div>
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
-            <span style="color:var(--text-secondary)">Alt. route ETA</span>
-            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--green-safe)">30 min</span>
-          </div>
-          <button onclick="document.getElementById('reroute-popup').classList.add('show')"
-            style="margin-top:6px;width:100%;padding:8px;font-family:'Courier New','Lucida Console',monospace;font-size:0.58rem;letter-spacing:2px;background:rgba(0,230,118,0.08);border:1px solid var(--green-safe);color:var(--green-safe);cursor:pointer;transition:all 0.2s;"
-            onmouseover="this.style.background='rgba(0,230,118,0.18)'"
-            onmouseout="this.style.background='rgba(0,230,118,0.08)'">
-            ⚡ STORM REROUTE
-          </button>
+        <div class="section-label">TRIP</div>
+        <div id="sp-trip-impact" style="display:flex;flex-direction:column;gap:6px;font-size:0.72rem;">
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">ETA</span><span id="sp-map-eta" style="font-family:'Courier New',monospace;color:var(--cyan)">Set a destination</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">Distance</span><span id="sp-map-dist" style="font-family:'Courier New',monospace;color:var(--cyan)">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">NWS alerts</span><span id="sp-map-alertn" style="font-family:'Courier New',monospace;color:var(--cyan)">—</span></div>
+          <div style="font-size:0.62rem;color:var(--text-secondary);line-height:1.45;">No weather-delay or alternate-route model. Times are OSRM driving estimates only.</div>
         </div>
       </div>
     </div><!-- /.right-panel -->
@@ -3443,7 +3335,7 @@ body {
                 <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
               </div>
             </div>
-            <div class="scope-label" style="margin-top:8px;">NWS BASE REFLECTIVITY — LIVE</div>
+            <div class="scope-label" style="margin-top:8px;">NWS BASE REFLECTIVITY — LIVE<br><span style="opacity:.75;font-size:0.58rem;letter-spacing:0.5px;">Empty circle means no precipitation returns, not a missing radar.</span></div>
           </div>
           <div style="flex:1;min-width:180px;">
             <div class="wx-title">dBZ SCALE (NWS BASE REFLECTIVITY)</div>
@@ -3454,13 +3346,8 @@ body {
               </div>
             </div>
             <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
-              <div class="wx-title">TRACKED CELLS (SIMULATED)</div>
-              <div style="font-family:'Courier New',monospace;font-size:0.62rem;color:var(--text-secondary);border:1px dashed var(--grid-line);padding:5px 7px;line-height:1.5;">
-                ⚠ ILLUSTRATIVE DEMO DATA ONLY — not real storm-cell tracking. Separate from the live radar scope above.
-              </div>
-              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--red-alert);">● CELL-A7 · SUPERCELL · NE 28mph · dBZ 68</div>
-              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--amber);">● CELL-B3 · MODERATE · N 18mph · dBZ 52</div>
-              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--cyan);">● CELL-C1 · LIGHT · SE 12mph · dBZ 32</div>
+              <div class="wx-title">NWS ALERTS</div>
+              <div id="sp-nws-alert-list-wx" class="sp-nws-list">No GPS fix yet — alerts load after a live location.</div>
             </div>
           </div>
         </div>
@@ -3479,25 +3366,8 @@ body {
       </div>
 
       <div>
-        <div class="wx-title">ROUTE HAZARDS</div>
-        <div class="hazard-item">
-          <div class="hazard-sev high"></div>
-          <div>
-            <div class="hazard-name">Severe Thunderstorm</div>
-            <div class="hazard-desc">Supercell at 4.1 mi. Hail &gt;1" possible. Moving NE at 28 mph.</div>
-          </div>
-        </div>
-        <div class="hazard-item">
-          <div class="hazard-sev med"></div>
-          <div>
-            <div class="hazard-name">Heavy Rain — Hydroplane Risk</div>
-            <div class="hazard-desc">2.3 mi ahead on Hwy 101. Reduce speed advisory.</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="font-family:'Courier New',monospace;font-size:0.58rem;letter-spacing:1.5px;padding:6px 10px;background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.2);color:rgba(255,255,255,0.4);display:inline-block;">
-        PROTOTYPE DATA · SIMULATED · NOT LIVE
+        <div class="wx-title">NWS HAZARDS</div>
+        <div id="sp-route-hazards" class="sp-nws-list">No GPS fix yet — official alerts load after a live location.</div>
       </div>
     </div><!-- /.wx-left -->
 
@@ -3523,21 +3393,11 @@ body {
       </div>
 
       <div>
-        <div class="wx-title">WEATHER IMPACT</div>
+        <div class="wx-title">TRIP</div>
         <div style="display:flex;flex-direction:column;gap:6px;font-size:0.72rem;">
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-secondary)">Current ETA</span>
-            <span style="font-family:'Courier New',monospace;color:var(--amber)">24 min</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-secondary)">Weather delay</span>
-            <span style="font-family:'Courier New',monospace;color:var(--red-alert)">+12 min</span>
-          </div>
-          <div style="height:1px;background:var(--grid-line)"></div>
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-secondary)">Alt. ETA</span>
-            <span style="font-family:'Courier New',monospace;color:var(--green-safe)">30 min</span>
-          </div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">ETA</span><span id="sp-wx-eta" style="font-family:'Courier New',monospace;color:var(--cyan)">Set a destination</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">Distance</span><span id="sp-wx-dist" style="font-family:'Courier New',monospace;color:var(--cyan)">—</span></div>
+          <div style="font-size:0.62rem;color:var(--text-secondary);line-height:1.45;">OSRM estimate when a drive is started. Not a storm-delay forecast.</div>
         </div>
       </div>
     </div><!-- /.wx-right -->
@@ -3559,7 +3419,7 @@ body {
     </div>
     <div class="sp-set-head">MAP</div>
     <div class="sp-set-row">
-      <div><b>Map place names</b><span>US towns, cities, and streets on the GPS map</span></div>
+      <div><b>Map place names</b><span>OpenStreetMap tiles include street names. Off hides the extra label pane if one is present.</span></div>
       <button type="button" id="sp-set-labels">ON</button>
     </div>
     <div class="sp-set-head">THIS DEVICE</div>
@@ -3579,23 +3439,15 @@ body {
       <div><b>Saved home / work</b><span>Wipe those two slots</span></div>
       <button type="button" id="sp-set-saved">CLEAR</button>
     </div>
-    <div class="sp-set-head">ACCOUNT</div>
-    <div class="sp-set-row">
-      <div>
-        <b>Customer vault</b>
-        <span>Sign-in is next — not this build. Until then every trip, pin, and setting stays on this device.</span>
-        <span class="sp-set-vault">When the vault lands it will hold:
-Profile — name and phone
-Emergency contacts
-Synced Home / Work / favorites
-Trip history across devices
-Shared driver intel on your account
-Privacy, data export, and account delete</span>
-      </div>
-    </div>
     <div class="sp-set-head">ABOUT</div>
     <div class="sp-set-row">
-      <div><b>Storm Path</b><span>Navigation × weather. Live NWS radar. Live device GPS. Intel and plans on this device.</span></div>
+      <div><b>Storm Path</b><span>Live device GPS, National Weather Service forecasts/alerts, NOAA base-reflectivity radar, OpenStreetMap tiles, OSRM driving routes. Data stays on this device.</span></div>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Not emergency navigation</b><span>Not a substitute for official warnings, NOAA Weather Radio, or 911. GPS, radar, and routes can be late, stale, or wrong. Confirm with weather.gov before you drive into a storm.</span></div>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Sources</b><span>api.weather.gov · opengeo.ncep.noaa.gov · tile.openstreetmap.org · router.project-osrm.org · photon.komoot.io</span></div>
     </div>
   </div>
 </div>
@@ -3772,12 +3624,8 @@ function zoomOut() {
 
 // ── Accept reroute ──
 function acceptReroute() {
-  document.getElementById('reroute-popup').classList.remove('show');
-  document.getElementById('eta-val').textContent = '30';
-  document.getElementById('dist-val').textContent = '9.8';
-  const hudNav = document.getElementById('nextturn-hud');
-  hudNav.style.borderColor = 'var(--green-safe)';
-  setTimeout(() => { hudNav.style.borderColor = 'var(--amber)'; }, 2000);
+  const pop = document.getElementById('reroute-popup');
+  if (pop) pop.classList.remove('show');
 }
 
 // ────────────────────────────────────────────────
@@ -4692,7 +4540,7 @@ function spSetState(stateKey) {
     if (actionText)   actionText.textContent   = data.action;
     if (reasonText)   reasonText.textContent   = data.reason;
     if (fallbackText) fallbackText.textContent = data.fallback;
-    if (placeholder)  placeholder.style.display = data.showPlaceholder ? 'inline-block' : 'none';
+    if (placeholder)  placeholder.style.display = 'none';
 
     const panel = document.getElementById('sp-source-panel');
     if (panel) spRenderSourceChips(panel, runtime.sources);
@@ -4978,7 +4826,7 @@ function runStartupSafetyChecks() {
   if (reasonText)   reasonText.textContent   = data.reason;
   if (fallbackText) fallbackText.textContent = data.fallback;
   if (placeholderBadge) {
-    placeholderBadge.style.display = data.showPlaceholder ? 'inline-block' : 'none';
+    placeholderBadge.style.display = 'none';
   }
 
   const panel = document.getElementById('sp-source-panel');
@@ -5326,6 +5174,51 @@ function spUpdateWeatherChips(data) {
   setAll('wx-val-pressure', data.pressureDisplay);
   setAll('wx-val-visibility', data.visibilityDisplay);
   setAll('wx-val-cape', data.capeDisplay);
+  document.querySelectorAll('.wx-chip').forEach(chip => {
+    const txt = (chip.textContent || '').replace(/\s+/g, ' ').trim();
+    const na = /\bN\/A\b/.test(txt) || txt === '--' || /\s--\s/.test(' ' + txt + ' ');
+    const hasNum = /\d/.test(txt);
+    if (!hasNum && (na || /Hg|VIS|CAPE/.test(txt))) chip.style.display = 'none';
+    else chip.style.display = '';
+  });
+}
+
+function spPaintNwsAlerts(alerts) {
+  const rows = [];
+  (alerts || []).forEach(f => {
+    const p = (f && f.properties) ? f.properties : {};
+    const ev = typeof p.event === 'string' ? p.event : 'NWS alert';
+    const sev = typeof p.severity === 'string' ? p.severity : '';
+    const hl = typeof p.headline === 'string' ? p.headline : (typeof p.areaDesc === 'string' ? p.areaDesc : ev);
+    rows.push({ ev: ev, sev: sev, hl: String(hl).slice(0, 180) });
+  });
+  function fill(id, empty) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = '';
+    if (!rows.length) {
+      el.textContent = empty;
+      return;
+    }
+    rows.slice(0, 8).forEach(r => {
+      const d = document.createElement('div');
+      d.className = 'sp-nws-row';
+      const top = document.createElement('div');
+      top.textContent = (r.sev ? r.sev.toUpperCase() + ' · ' : '') + r.ev;
+      const sub = document.createElement('div');
+      sub.className = 'sp-nws-sub';
+      sub.textContent = r.hl;
+      d.appendChild(top);
+      d.appendChild(sub);
+      el.appendChild(d);
+    });
+  }
+  const empty = 'No active NWS alerts at this location (api.weather.gov).';
+  fill('sp-nws-alert-list', empty);
+  fill('sp-nws-alert-list-wx', empty);
+  fill('sp-route-hazards', empty);
+  const nEl = document.getElementById('sp-map-alertn');
+  if (nEl) nEl.textContent = String(rows.length);
 }
 
 function spUpdateAlertTicker(alerts) {
@@ -5434,6 +5327,7 @@ async function spFetchWeather(lat, lon) {
 
     const alerts = (alertsResp && Array.isArray(alertsResp.features)) ? alertsResp.features : [];
     spUpdateAlertTicker(alerts);
+    spPaintNwsAlerts(alerts);
 
     const decidedState = spEvaluateAlertState(alerts);
     console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' +
@@ -6418,8 +6312,18 @@ async function spRouteTo(place) {
   const dist = document.getElementById('dist-val');
   if (eta) eta.textContent = spFmtMins(route.duration);
   if (dist) dist.textContent = spMiles(route.distance).toFixed(1);
+  const etaTxt = spFmtMins(route.duration) + ' min';
+  const distTxt = spMiles(route.distance).toFixed(1) + ' mi';
+  const mapEta = document.getElementById('sp-map-eta');
+  const mapDist = document.getElementById('sp-map-dist');
+  const wxEta = document.getElementById('sp-wx-eta');
+  const wxDist = document.getElementById('sp-wx-dist');
+  if (mapEta) mapEta.textContent = etaTxt;
+  if (mapDist) mapDist.textContent = distTxt;
+  if (wxEta) wxEta.textContent = etaTxt;
+  if (wxDist) wxDist.textContent = distTxt;
   const traffic = document.getElementById('sp-traffic-val');
-  if (traffic) { traffic.textContent = 'LIVE'; traffic.style.color = 'var(--cyan)'; }
+  if (traffic) { traffic.textContent = 'OSRM'; traffic.style.color = 'var(--cyan)'; }
   const wx = document.getElementById('sp-wx-val');
   if (wx && typeof spLastAlertState === 'string') {
     const map = { normal: 'CLR', caution: 'ADV', danger: 'SEV', stop: 'EXT' };
@@ -6761,8 +6665,9 @@ function spPaintSpeed() {
   if (live) live.textContent = spGPSAvailable ? 'GPS SPEED' : 'WAITING';
   if (homeSpd) homeSpd.textContent = (spGPSAvailable ? Math.round(shown) : 0) + ' ' + unit;
   if (lim) {
-    lim.style.display = spGetSet().limit === false ? 'none' : 'flex';
-    if (spSpeedLimitMph == null) lim.textContent = '--';
+    const showLim = spGetSet().limit !== false && spSpeedLimitMph != null;
+    lim.style.display = showLim ? 'flex' : 'none';
+    if (spSpeedLimitMph == null) lim.textContent = '';
     else lim.textContent = String(Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph));
   }
   if (ring) {
@@ -7299,6 +7204,12 @@ function spBootNav() {
       gpsChip.addEventListener('click', function () {
         try { spInitGeolocation(); } catch (e) {}
       });
+    }
+    if (!/(?:\?|&)dev=1(?:&|$)/.test(location.search)) {
+      const dt = document.getElementById('sp-dev-toggle');
+      const dp = document.getElementById('sp-dev-panel');
+      if (dt) dt.style.display = 'none';
+      if (dp) { dp.style.display = 'none'; dp.classList.remove('show'); }
     }
   });
 }
