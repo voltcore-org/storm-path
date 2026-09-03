@@ -5,8 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Storm Path — storm-aware navigation with live NWS weather, NOAA radar, and device GPS. Zero-cost public endpoints only.">
 <meta name="theme-color" content="#020408">
+<meta http-equiv="Permissions-Policy" content="geolocation=(self)">
+<meta name="geo.region" content="US-IL">
+<meta name="geo.placename" content="Murphysboro, Illinois">
 <title>STORMPATH V1.3.5 — Navigation × Weather Intelligence</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style id="sp-gps-gate-css">
+  .sp-gps-gate {
+    position: absolute; top: 16px; left: 16px; right: 16px; z-index: 1200;
+    background: rgba(7,11,16,0.94); border: 1px solid var(--cyan); color: var(--text-primary);
+    border-radius: 12px; padding: 14px 16px; text-align: left; cursor: pointer;
+    font: 800 13px/1.2 Segoe UI, sans-serif; letter-spacing: 1.2px;
+  }
+  .sp-gps-gate[hidden] { display: none !important; }
+  .sp-gps-gate span { display: block; margin-top: 6px; font-weight: 500; letter-spacing: 0.2px;
+    color: var(--text-secondary); font-size: 12px; line-height: 1.45; text-transform: none; }
+</style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
   @import url('data:text/css,');
@@ -3213,6 +3227,7 @@ body {
     <!-- MAP CANVAS -->
     <div class="map-wrap" id="mapWrap">
       <div id="sp-leaflet"></div>
+      <button type="button" id="sp-gps-gate" class="sp-gps-gate">USE MY LIVE GPS<span>Map opens on Murphysboro, Illinois. Device GPS or a residential network location unlocks live NWS alerts and NOAA radar. St. Louis is not used.</span></button>
       <canvas id="mapCanvas"></canvas>
       <img id="radarImg" class="hidden" alt="" />
       <div class="scanlines"></div>
@@ -5014,6 +5029,8 @@ function spOnPositionSuccess(pos) {
   spCoords.accuracy = acc;
   spGPSAvailable = true;
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
+  var _gate = document.getElementById('sp-gps-gate');
+  if (_gate) _gate.hidden = true;
   spUpdateCoordsDisplay();
   spApplyGpsToMarker();
   spPaintSpeed();
@@ -5058,6 +5075,7 @@ function spOnPositionError(err) {
   spUpdateCoordsDisplay();
   spRecomputeState();
   if (activeScreen === 'map') drawMap();
+  try { spTryNetworkFix(); } catch (e2) {}
 }
 
 function spInitGeolocation() {
@@ -5066,11 +5084,67 @@ function spInitGeolocation() {
     spSetGPSStatus('GPS UNAVAILABLE', 'var(--red-alert)');
     spUpdateCoordsDisplay();
     spRecomputeState();
+    try { spTryNetworkFix(); } catch (e) {}
     return;
   }
   const gpsOptions = { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 };
   navigator.geolocation.getCurrentPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
   spGPSWatchId = navigator.geolocation.watchPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
+}
+
+var spNetworkFixTried = false;
+function spHideGpsGate() {
+  var gate = document.getElementById('sp-gps-gate');
+  if (gate) gate.hidden = true;
+}
+function spShowGpsGate() {
+  var gate = document.getElementById('sp-gps-gate');
+  if (gate && !spGPSAvailable) gate.hidden = false;
+}
+function spAcceptNetworkFix(lat, lon, acc) {
+  if (spGPSAvailable) return;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  var hadFixBefore = spGPSAvailable;
+  spCoords.lat = lat;
+  spCoords.lon = lon;
+  spCoords.accuracy = acc;
+  spGPSAvailable = true;
+  spSetGPSStatus('LOCATION LIVE', 'var(--cyan)');
+  spHideGpsGate();
+  spUpdateCoordsDisplay();
+  try { spApplyGpsToMarker(); } catch (e) {}
+  try { if (spLeaflet) spLeaflet.setView([lat, lon], 14, { animate: true }); } catch (e) {}
+  try { spRecomputeState(); } catch (e) {}
+  if (!hadFixBefore) {
+    try { spFetchWeather(lat, lon); } catch (e) {}
+    try { spFetchRadarImage(lat, lon); } catch (e) {}
+    try { spStartRadarRefresh(); } catch (e) {}
+  }
+}
+function spTryNetworkFix() {
+  if (spGPSAvailable || spNetworkFixTried) return;
+  spNetworkFixTried = true;
+  fetch('https://get.geojs.io/v1/ip/geo.json').then(function (r) {
+    return r && r.ok ? r.json() : null;
+  }).then(function (body) {
+    if (spGPSAvailable || !body) { spShowGpsGate(); return; }
+    var lat = parseFloat(body.latitude);
+    var lon = parseFloat(body.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { spShowGpsGate(); return; }
+    var org = [body.organization, body.organization_name, body.asn, body.country].join(' ');
+    if (/google|amazon|aws|azure|microsoft|digitalocean|cloudflare|ovh|hetzner|linode|oracle|colo|datacenter|facebook|meta|cloud/i.test(org)) {
+      spShowGpsGate();
+      return;
+    }
+    var cc = String(body.country_code || body.country || '').toUpperCase();
+    if (cc && cc !== 'US' && cc !== 'USA' && cc.indexOf('UNITED STATES') < 0) { spShowGpsGate(); return; }
+    spAcceptNetworkFix(lat, lon, 5000);
+  }).catch(function () { spShowGpsGate(); });
+}
+function spRequestLiveLocation() {
+  spNetworkFixTried = false;
+  try { spInitGeolocation(); } catch (e) {}
+  setTimeout(function () { try { spTryNetworkFix(); } catch (e) {} }, 1400);
 }
 
 try { spRecomputeState(); } catch (e) { console.warn('StormPath boot state', e); }
@@ -5639,7 +5713,7 @@ function spBias() {
     const c = spLeaflet.getCenter();
     return { lat: c.lat, lon: c.lng };
   }
-  return { lat: 38.627, lon: -90.1994 };
+  return { lat: 37.7645, lon: -89.3351 }; /* Murphysboro, IL — view only */
 }
 
 function spEnsureLeaflet() {
@@ -6938,6 +7012,7 @@ function spDeleteIntel(id) {
 }
 
 function spRecenter() {
+  if (!spGPSAvailable) { try { spRequestLiveLocation(); } catch (e) {} }
   spEnsureLeaflet();
   if (!spLeaflet) return;
   spFollowGps = true;
@@ -7297,14 +7372,19 @@ function spBootNav() {
   setInterval(spTickTrip, 1000);
   requestAnimationFrame(() => {
     try { spEnsureLeaflet(); } catch (e) {}
-    try { spInitGeolocation(); } catch (e) {}
+    try { spRequestLiveLocation(); } catch (e) {}
+    var gpsGateBtn = document.getElementById('sp-gps-gate');
+    if (gpsGateBtn && !gpsGateBtn.dataset.spBound) {
+      gpsGateBtn.dataset.spBound = '1';
+      gpsGateBtn.addEventListener('click', function () { try { spRequestLiveLocation(); } catch (e) {} });
+    }
     var gpsChip = document.getElementById('top-gps-label');
     if (gpsChip && !gpsChip.dataset.spBound) {
       gpsChip.dataset.spBound = '1';
       gpsChip.style.cursor = 'pointer';
       gpsChip.title = 'Tap to request location';
       gpsChip.addEventListener('click', function () {
-        try { spInitGeolocation(); } catch (e) {}
+        try { spRequestLiveLocation(); } catch (e) {}
       });
     }
     if (!/(?:\?|&)dev=1(?:&|$)/.test(location.search)) {
