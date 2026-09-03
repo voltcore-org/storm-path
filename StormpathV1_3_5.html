@@ -5,8 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Storm Path — storm-aware navigation with live NWS weather, NOAA radar, and device GPS. Zero-cost public endpoints only.">
 <meta name="theme-color" content="#020408">
+<meta http-equiv="Permissions-Policy" content="geolocation=(self)">
+<meta name="geo.region" content="US-IL">
+<meta name="geo.placename" content="Murphysboro, Illinois">
 <title>STORMPATH V1.3.5 — Navigation × Weather Intelligence</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style id="sp-gps-gate-css">
+  .sp-gps-gate {
+    position: absolute; top: 8px; left: 8px; right: 96px; z-index: 25;
+    background: rgba(7,11,16,0.94); border: 1px solid var(--cyan); color: var(--text-primary);
+    border-radius: 12px; padding: 8px 12px; text-align: left; cursor: pointer;
+    font: 800 12px/1.2 Segoe UI, sans-serif; letter-spacing: 1.1px;
+    max-height: 92px; overflow: hidden;
+  }
+  .sp-gps-gate[hidden] { display: none !important; }
+  .sp-gps-gate span { display: block; margin-top: 4px; font-weight: 500; letter-spacing: 0.2px;
+    color: var(--text-secondary); font-size: 11px; line-height: 1.35; text-transform: none; }
+</style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
   @import url('data:text/css,');
@@ -770,6 +785,26 @@
   }
 
   #miniRadar.hidden, #miniRadarWx.hidden { opacity: 0; }
+  .sp-nws-list {
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    min-height: 2.2em;
+  }
+  .sp-nws-row {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+  }
+  .sp-nws-sub {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 0.62rem;
+    line-height: 1.4;
+  }
 
   .scope-compass {
     position: absolute;
@@ -1613,12 +1648,9 @@ body {
     border-radius: 3px;
   }
 
-  #screen-map .left-panel {
-    width: 220px;
-  }
-
+  #screen-map .left-panel,
   #screen-map .right-panel {
-    width: 205px;
+    display: none;
   }
 }
 
@@ -1692,25 +1724,21 @@ body {
   }
 
   .map-screen-inner {
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
+    flex-direction: row;
+    overflow: hidden;
   }
 
   #screen-map .map-wrap {
-    order: 1;
-    flex: 0 0 52vh;
+    order: 0;
+    flex: 1 1 auto;
     width: 100%;
-    min-height: 330px;
+    min-height: 0;
+    height: 100%;
   }
 
   #screen-map .left-panel,
   #screen-map .right-panel {
-    width: 100%;
-    flex: none;
-    overflow: visible;
-    border-left: none;
-    border-right: none;
+    display: none;
   }
 
   #screen-map .left-panel {
@@ -1853,8 +1881,9 @@ body {
 
 @media (max-width: 620px) and (max-height: 700px) {
   #screen-map .map-wrap {
-    flex-basis: 48vh;
-    min-height: 285px;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
   }
 
   .sp-center {
@@ -2366,6 +2395,7 @@ body {
     font-weight: 600;
     color: var(--text-primary);
   }
+  .sp-result-name { font-size: 0.92rem; font-weight: 650; }
   .sp-result-sub {
     font-size: 0.72rem;
     color: var(--text-secondary);
@@ -2613,11 +2643,13 @@ body {
     flex: 1 1 auto !important;
     width: 100% !important;
     min-height: 0 !important;
-    height: auto !important;
+    height: 100% !important;
   }
   #screen-map.sp-map-clean .map-screen-inner {
     overflow: hidden !important;
     flex-direction: row !important;
+    min-height: 0 !important;
+    height: 100% !important;
   }
   .map-wrap.live-map .scanlines,
   .map-wrap.live-map .vignette,
@@ -2977,25 +3009,62 @@ body {
     }
   }
 
-</style>
-<script>
-(function(){
-  var SRC="storm-path";
-  var URL="https://core-api.dominic-calandro1991.workers.dev/api/v1/events";
-  function emit(type,severity,payload){
-    try{
-      fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:SRC,type:type,severity:severity,payload:payload||{}}),keepalive:true}).catch(function(){});
-    }catch(e){}
+
+  #sp-leaflet .sp-base-tiles {
+    filter: invert(1) hue-rotate(180deg) brightness(0.88) contrast(0.92);
   }
-  window.addEventListener("error",function(e){
-    emit("runtime.error","error",{message:String(e.message||""),filename:String(e.filename||""),lineno:e.lineno||0});
-  });
-  window.addEventListener("unhandledrejection",function(e){
-    emit("runtime.error","error",{reason:String(e.reason||"")});
-  });
-  emit("app.event","info",{status:"boot"});
-})();
-</script>
+
+  /* iOS Safari / iPhone map lock — map pane must have a real height */
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+  .sp-screen.active {
+    min-height: 0;
+    height: auto;
+  }
+  #screen-map.active,
+  #screen-map.sp-map-clean.active {
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 1 1 auto !important;
+  }
+  #sp-leaflet,
+  #sp-leaflet.leaflet-container {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  @media (max-width: 840px) {
+    #screen-map .left-panel,
+    #screen-map .right-panel,
+    #screen-map.sp-map-clean .left-panel {
+      display: none !important;
+    }
+    #screen-map .map-screen-inner,
+    #screen-map.sp-map-clean .map-screen-inner {
+      flex-direction: row !important;
+      overflow: hidden !important;
+      height: 100% !important;
+      min-height: 0 !important;
+    }
+    #screen-map .map-wrap,
+    #screen-map.sp-map-clean .map-wrap {
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      height: 100% !important;
+      order: 0 !important;
+    }
+    .sp-gps-gate {
+      top: 8px; left: 8px; right: 88px; z-index: 25;
+      padding: 8px 10px;
+    }
+  }
+</style>
+<script src="telemetry.js?v=20260903d"></script>
 </head>
 <body>
 
@@ -3017,7 +3086,7 @@ body {
   <div class="topbar-right">
     <div class="status-item"><div class="status-dot" id="top-gps-dot"></div><span id="top-gps-label">GPS ACQUIRING</span></div>
     <div class="status-item"><div class="status-dot" id="top-radar-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div><span id="top-radar-label">RADAR WAITING</span></div>
-    <div class="alert-badge" id="wx-radar-status-badge">⚠ AWAITING GPS FIX</div>
+    <div class="alert-badge" id="wx-radar-status-badge">VIEW · MURPHYSBORO — NOT GPS</div>
     <div id="clock" style="font-family:'Courier New',monospace;font-size:0.72rem;color:var(--cyan-dim)">--:--:--</div>
   </div>
 </div>
@@ -3098,7 +3167,7 @@ body {
       <div id="sp-plan-list"></div>
     </div>
 
-    <div class="sp-placeholder-badge" id="sp-placeholder-badge" style="display:none">PROTOTYPE DATA · SIMULATED · NOT LIVE</div>
+    <div class="sp-placeholder-badge" id="sp-placeholder-badge" style="display:none" aria-hidden="true"></div>
 
     <div class="sp-stop-banner">
       <div class="line-1">STOP</div>
@@ -3158,48 +3227,7 @@ body {
       <div class="panel-section sp-trip-block">
         <div class="section-label">TURN-BY-TURN</div>
         <div id="turns-list">
-          <div class="turn-item active">
-            <div class="turn-icon">↑</div>
-            <div class="turn-info">
-              <div class="turn-street">Continue on Oak Ave</div>
-              <div class="turn-dist">0.4 mi · Straight ahead</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">↰</div>
-            <div class="turn-info">
-              <div class="turn-street">Turn Left on Maple St</div>
-              <div class="turn-dist">1.2 mi · 3 min</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">↱</div>
-            <div class="turn-info">
-              <div class="turn-street">Turn Right on Hwy 101</div>
-              <div class="turn-dist">2.8 mi · 8 min</div>
-            </div>
-          </div>
-          <div class="turn-item" style="border-color:rgba(255,61,61,0.3);">
-            <div class="turn-icon" style="border-color:rgba(255,61,61,0.4);background:rgba(255,61,61,0.08);">⚡</div>
-            <div class="turn-info">
-              <div class="turn-street" style="color:var(--red-alert);">⚠ Storm Zone Ahead</div>
-              <div class="turn-dist">4.1 mi · Heavy precipitation</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">↱</div>
-            <div class="turn-info">
-              <div class="turn-street">Exit 24B — Central Blvd</div>
-              <div class="turn-dist">6.5 mi · 18 min</div>
-            </div>
-          </div>
-          <div class="turn-item">
-            <div class="turn-icon">🏁</div>
-            <div class="turn-info">
-              <div class="turn-street">Arrive Downtown Station</div>
-              <div class="turn-dist">8.3 mi · 24 min</div>
-            </div>
-          </div>
+          <div class="turn-item"><div class="turn-info"><div class="turn-street">Set a destination to load turn-by-turn.</div><div class="turn-dist"></div></div></div>
         </div>
       </div>
 
@@ -3246,6 +3274,7 @@ body {
     <!-- MAP CANVAS -->
     <div class="map-wrap" id="mapWrap">
       <div id="sp-leaflet"></div>
+      <button type="button" id="sp-gps-gate" class="sp-gps-gate">USE MY LIVE GPS<span>Map is Murphysboro, IL — VIEW only. Device GPS is the only LIVE NWS / NOAA trigger. IP location is never GPS.</span></button>
       <canvas id="mapCanvas"></canvas>
       <img id="radarImg" class="hidden" alt="" />
       <div class="scanlines"></div>
@@ -3266,13 +3295,6 @@ body {
         <button class="zoom-btn" onclick="zoomOut()">−</button>
       </div>
 
-      <div class="hud-storm-warning sp-sim-hidden">
-        <span style="font-size:1.2rem">⚡</span>
-        <div>
-          <div class="warning-text">SIMULATED THUNDERSTORM SCENARIO</div>
-          <div class="warning-details">Prototype scenario · Simulated hail · Not a live warning</div>
-        </div>
-      </div>
 
       <div class="hud-nextturn" id="nextturn-hud">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -3300,14 +3322,7 @@ body {
 
       <div class="hud-radar-time" id="radar-time">RADAR · AWAITING GPS FIX</div>
 
-      <div class="reroute-popup" id="reroute-popup">
-        <div class="reroute-title">⚡ WEATHER REROUTE AVAILABLE</div>
-        <div class="reroute-desc">StormPath detected a severe cell crossing your route at mile 4.1. An alternate route avoids the storm with +6 min added time.</div>
-        <div class="reroute-btns">
-          <button class="reroute-btn accept" onclick="acceptReroute()">✓ ACCEPT +6 MIN</button>
-          <button class="reroute-btn dismiss" onclick="document.getElementById('reroute-popup').classList.remove('show')">DISMISS</button>
-        </div>
-      </div>
+      <div class="reroute-popup" id="reroute-popup" hidden></div>
 
       <div class="sp-nav-dock">
         <button type="button" class="sp-search-pill" id="sp-search-pill" aria-label="Set destination">
@@ -3340,95 +3355,22 @@ body {
               <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
             </div>
           </div>
-          <div class="scope-label">NWS BASE REFLECTIVITY — LIVE</div>
+          <div class="scope-label" id="scope-live-caption">NWS BASE REFLECTIVITY — LIVE<br><span style="opacity:.75;font-size:0.58rem;letter-spacing:0.5px;">Empty circle means no precipitation returns, not a missing radar.</span></div>
         </div>
       </div>
 
       <div class="panel-section" style="flex:1;">
-        <div class="section-label">TRACKED STORM CELLS (SIMULATED)</div>
-        <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--text-secondary);border:1px dashed var(--grid-line);padding:6px 8px;margin-bottom:10px;line-height:1.5;">
-          ⚠ ILLUSTRATIVE DEMO DATA ONLY — not real storm-cell tracking. Separate from the live NWS radar imagery above.
-        </div>
-        <div class="storm-cell danger" id="cell-A">
-          <div class="cell-header">
-            <span class="cell-id">CELL-A7</span>
-            <span class="cell-type severe">SUPERCELL</span>
-          </div>
-          <div class="cell-stats">
-            <div class="cell-stat">MOVEMENT<strong>NE 28mph</strong></div>
-            <div class="cell-stat">MAX dBZ<strong style="color:var(--red-alert)">68</strong></div>
-            <div class="cell-stat">HAIL<strong style="color:var(--red-alert)">1.25"</strong></div>
-            <div class="cell-stat">TOP<strong>42,500 ft</strong></div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:88%;background:var(--red-alert);"></div>
-          </div>
-          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--red-alert);margin-top:4px;">
-            ⚠ CROSSES ROUTE IN ~9 MIN
-          </div>
-        </div>
-
-        <div class="storm-cell warning" id="cell-B">
-          <div class="cell-header">
-            <span class="cell-id">CELL-B3</span>
-            <span class="cell-type moderate">MODERATE</span>
-          </div>
-          <div class="cell-stats">
-            <div class="cell-stat">MOVEMENT<strong>N 18mph</strong></div>
-            <div class="cell-stat">MAX dBZ<strong style="color:var(--amber)">52</strong></div>
-            <div class="cell-stat">HAIL<strong>NONE</strong></div>
-            <div class="cell-stat">TOP<strong>28,000 ft</strong></div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:55%;background:var(--amber);"></div>
-          </div>
-          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--amber);margin-top:4px;">
-            NEAR ROUTE — MONITOR
-          </div>
-        </div>
-
-        <div class="storm-cell" id="cell-C">
-          <div class="cell-header">
-            <span class="cell-id">CELL-C1</span>
-            <span class="cell-type light">LIGHT</span>
-          </div>
-          <div class="cell-stats">
-            <div class="cell-stat">MOVEMENT<strong>SE 12mph</strong></div>
-            <div class="cell-stat">MAX dBZ<strong style="color:var(--cyan)">32</strong></div>
-            <div class="cell-stat">HAIL<strong>NONE</strong></div>
-            <div class="cell-stat">TOP<strong>15,000 ft</strong></div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:25%;background:var(--cyan);"></div>
-          </div>
-          <div style="font-family:'Courier New',monospace;font-size:0.6rem;color:var(--cyan-dim);margin-top:4px;">
-            OFF ROUTE — NO THREAT
-          </div>
-        </div>
+        <div class="section-label">NWS ALERTS</div>
+        <div id="sp-nws-alert-list" class="sp-nws-list">No GPS fix yet — alerts load after a live location.</div>
       </div>
 
       <div class="panel-section">
-        <div class="section-label">WEATHER IMPACT</div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
-            <span style="color:var(--text-secondary)">Current ETA</span>
-            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--amber)">24 min</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
-            <span style="color:var(--text-secondary)">Weather delay</span>
-            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--red-alert)">+12 min</span>
-          </div>
-          <div style="height:1px;background:var(--grid-line)"></div>
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;align-items:center;">
-            <span style="color:var(--text-secondary)">Alt. route ETA</span>
-            <span style="font-family:'Courier New','Lucida Console',monospace;color:var(--green-safe)">30 min</span>
-          </div>
-          <button onclick="document.getElementById('reroute-popup').classList.add('show')"
-            style="margin-top:6px;width:100%;padding:8px;font-family:'Courier New','Lucida Console',monospace;font-size:0.58rem;letter-spacing:2px;background:rgba(0,230,118,0.08);border:1px solid var(--green-safe);color:var(--green-safe);cursor:pointer;transition:all 0.2s;"
-            onmouseover="this.style.background='rgba(0,230,118,0.18)'"
-            onmouseout="this.style.background='rgba(0,230,118,0.08)'">
-            ⚡ STORM REROUTE
-          </button>
+        <div class="section-label">TRIP</div>
+        <div id="sp-trip-impact" style="display:flex;flex-direction:column;gap:6px;font-size:0.72rem;">
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">ETA</span><span id="sp-map-eta" style="font-family:'Courier New',monospace;color:var(--cyan)">Set a destination</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">Distance</span><span id="sp-map-dist" style="font-family:'Courier New',monospace;color:var(--cyan)">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">NWS alerts</span><span id="sp-map-alertn" style="font-family:'Courier New',monospace;color:var(--cyan)">—</span></div>
+          <div style="font-size:0.62rem;color:var(--text-secondary);line-height:1.45;">No weather-delay or alternate-route model. Times are OSRM driving estimates only.</div>
         </div>
       </div>
     </div><!-- /.right-panel -->
@@ -3456,7 +3398,7 @@ body {
                 <span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>
               </div>
             </div>
-            <div class="scope-label" style="margin-top:8px;">NWS BASE REFLECTIVITY — LIVE</div>
+            <div class="scope-label" style="margin-top:8px;">NWS BASE REFLECTIVITY — LIVE<br><span style="opacity:.75;font-size:0.58rem;letter-spacing:0.5px;">Empty circle means no precipitation returns, not a missing radar.</span></div>
           </div>
           <div style="flex:1;min-width:180px;">
             <div class="wx-title">dBZ SCALE (NWS BASE REFLECTIVITY)</div>
@@ -3467,13 +3409,8 @@ body {
               </div>
             </div>
             <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
-              <div class="wx-title">TRACKED CELLS (SIMULATED)</div>
-              <div style="font-family:'Courier New',monospace;font-size:0.62rem;color:var(--text-secondary);border:1px dashed var(--grid-line);padding:5px 7px;line-height:1.5;">
-                ⚠ ILLUSTRATIVE DEMO DATA ONLY — not real storm-cell tracking. Separate from the live radar scope above.
-              </div>
-              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--red-alert);">● CELL-A7 · SUPERCELL · NE 28mph · dBZ 68</div>
-              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--amber);">● CELL-B3 · MODERATE · N 18mph · dBZ 52</div>
-              <div style="font-family:'Courier New',monospace;font-size:0.68rem;color:var(--cyan);">● CELL-C1 · LIGHT · SE 12mph · dBZ 32</div>
+              <div class="wx-title">NWS ALERTS</div>
+              <div id="sp-nws-alert-list-wx" class="sp-nws-list">No GPS fix yet — alerts load after a live location.</div>
             </div>
           </div>
         </div>
@@ -3492,25 +3429,8 @@ body {
       </div>
 
       <div>
-        <div class="wx-title">ROUTE HAZARDS</div>
-        <div class="hazard-item">
-          <div class="hazard-sev high"></div>
-          <div>
-            <div class="hazard-name">Severe Thunderstorm</div>
-            <div class="hazard-desc">Supercell at 4.1 mi. Hail &gt;1" possible. Moving NE at 28 mph.</div>
-          </div>
-        </div>
-        <div class="hazard-item">
-          <div class="hazard-sev med"></div>
-          <div>
-            <div class="hazard-name">Heavy Rain — Hydroplane Risk</div>
-            <div class="hazard-desc">2.3 mi ahead on Hwy 101. Reduce speed advisory.</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="font-family:'Courier New',monospace;font-size:0.58rem;letter-spacing:1.5px;padding:6px 10px;background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.2);color:rgba(255,255,255,0.4);display:inline-block;">
-        PROTOTYPE DATA · SIMULATED · NOT LIVE
+        <div class="wx-title">NWS HAZARDS</div>
+        <div id="sp-route-hazards" class="sp-nws-list">No GPS fix yet — official alerts load after a live location.</div>
       </div>
     </div><!-- /.wx-left -->
 
@@ -3536,21 +3456,11 @@ body {
       </div>
 
       <div>
-        <div class="wx-title">WEATHER IMPACT</div>
+        <div class="wx-title">TRIP</div>
         <div style="display:flex;flex-direction:column;gap:6px;font-size:0.72rem;">
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-secondary)">Current ETA</span>
-            <span style="font-family:'Courier New',monospace;color:var(--amber)">24 min</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-secondary)">Weather delay</span>
-            <span style="font-family:'Courier New',monospace;color:var(--red-alert)">+12 min</span>
-          </div>
-          <div style="height:1px;background:var(--grid-line)"></div>
-          <div style="display:flex;justify-content:space-between;">
-            <span style="color:var(--text-secondary)">Alt. ETA</span>
-            <span style="font-family:'Courier New',monospace;color:var(--green-safe)">30 min</span>
-          </div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">ETA</span><span id="sp-wx-eta" style="font-family:'Courier New',monospace;color:var(--cyan)">Set a destination</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary)">Distance</span><span id="sp-wx-dist" style="font-family:'Courier New',monospace;color:var(--cyan)">—</span></div>
+          <div style="font-size:0.62rem;color:var(--text-secondary);line-height:1.45;">OSRM estimate when a drive is started. Not a storm-delay forecast.</div>
         </div>
       </div>
     </div><!-- /.wx-right -->
@@ -3572,7 +3482,7 @@ body {
     </div>
     <div class="sp-set-head">MAP</div>
     <div class="sp-set-row">
-      <div><b>Map place names</b><span>US towns, cities, and streets on the GPS map</span></div>
+      <div><b>Map place names</b><span>OpenStreetMap tiles include street names. Off hides the extra label pane if one is present.</span></div>
       <button type="button" id="sp-set-labels">ON</button>
     </div>
     <div class="sp-set-head">THIS DEVICE</div>
@@ -3592,23 +3502,15 @@ body {
       <div><b>Saved home / work</b><span>Wipe those two slots</span></div>
       <button type="button" id="sp-set-saved">CLEAR</button>
     </div>
-    <div class="sp-set-head">ACCOUNT</div>
-    <div class="sp-set-row">
-      <div>
-        <b>Customer vault</b>
-        <span>Sign-in is next — not this build. Until then every trip, pin, and setting stays on this device.</span>
-        <span class="sp-set-vault">When the vault lands it will hold:
-Profile — name and phone
-Emergency contacts
-Synced Home / Work / favorites
-Trip history across devices
-Shared driver intel on your account
-Privacy, data export, and account delete</span>
-      </div>
-    </div>
     <div class="sp-set-head">ABOUT</div>
     <div class="sp-set-row">
-      <div><b>Storm Path</b><span>Navigation × weather. Live NWS radar. Live device GPS. Intel and plans on this device.</span></div>
+      <div><b>Storm Path</b><span>Live device GPS, National Weather Service forecasts/alerts, NOAA base-reflectivity radar, OpenStreetMap tiles, OSRM driving routes. Data stays on this device.</span></div>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Not emergency navigation</b><span>Not a substitute for official warnings, NOAA Weather Radio, or 911. GPS, radar, and routes can be late, stale, or wrong. Confirm with weather.gov before you drive into a storm.</span></div>
+    </div>
+    <div class="sp-set-row">
+      <div><b>Sources</b><span>api.weather.gov · opengeo.ncep.noaa.gov · tile.openstreetmap.org · router.project-osrm.org · photon.komoot.io</span></div>
     </div>
   </div>
 </div>
@@ -3785,12 +3687,8 @@ function zoomOut() {
 
 // ── Accept reroute ──
 function acceptReroute() {
-  document.getElementById('reroute-popup').classList.remove('show');
-  document.getElementById('eta-val').textContent = '30';
-  document.getElementById('dist-val').textContent = '9.8';
-  const hudNav = document.getElementById('nextturn-hud');
-  hudNav.style.borderColor = 'var(--green-safe)';
-  setTimeout(() => { hudNav.style.borderColor = 'var(--amber)'; }, 2000);
+  const pop = document.getElementById('reroute-popup');
+  if (pop) pop.classList.remove('show');
 }
 
 // ────────────────────────────────────────────────
@@ -3798,6 +3696,9 @@ function acceptReroute() {
 // ────────────────────────────────────────────────
 let activeScreen = 'map';
 let animFrame = null;
+let spLeaflet = null;
+let spGPSAvailable = false;
+let spCoords = { lat: null, lon: null, accuracy: null, speedMps: null, heading: null };
 
 // ── switchScreen — exclusive owner of screen visibility ──
 // Accepts 'driver', 'map', 'weather', 'settings'. Rejects invalid names.
@@ -4119,7 +4020,7 @@ function spUpdateWxRadarBadge() {
     el.classList.remove('live');
     el.classList.add('down');
   } else {
-    el.textContent = '⚠ AWAITING GPS FIX';
+    el.textContent = 'VIEW · MURPHYSBORO — NOT GPS';
     el.classList.remove('live');
     el.classList.remove('down');
   }
@@ -4490,12 +4391,17 @@ function spRenderSourceChips(containerEl, sources) {
   if (!containerEl) return;
   containerEl.innerHTML = '';
   const normalized = spNormalizeSourceStatuses(sources);
-  SP_SOURCE_KEYS.forEach(key => {
-    const status = normalized[key];
+  const gpsOk = (typeof spGPSAvailable !== 'undefined') && !!spGPSAvailable;
+  const rows = [
+    ['GPS', gpsOk ? 'connected' : 'unavailable'],
+    ['NOAA', normalized.NOAA === 'connected' ? 'connected' : 'unavailable'],
+    ['NWS', normalized.NWS === 'connected' ? 'connected' : 'unavailable']
+  ];
+  rows.forEach(function (row) {
     const chip = document.createElement('div');
-    chip.className = 'sp-source-chip src-' + status;
+    chip.className = 'sp-source-chip src-' + row[1];
     chip.style.marginBottom = '4px';
-    chip.innerHTML = '<span class="sp-source-dot"></span>' + key;
+    chip.innerHTML = '<span class="sp-source-dot"></span>' + row[0];
     containerEl.appendChild(chip);
   });
 }
@@ -4557,24 +4463,57 @@ function spPromoteLiveSource(key, status) {
 
 function spSourcesForState(stateData) {
   const out = spNormalizeSourceStatuses(stateData && stateData.sources);
-  if (!spLiveSources) return out;
-  if (spLiveSources.NWS === 'connected' || spLiveSources.NWS === 'unavailable') out.NWS = spLiveSources.NWS;
-  if (spLiveSources.NOAA === 'connected' || spLiveSources.NOAA === 'unavailable') out.NOAA = spLiveSources.NOAA;
+  try {
+    if (spLiveSources) {
+      if (spLiveSources.NWS === 'connected' || spLiveSources.NWS === 'unavailable') out.NWS = spLiveSources.NWS;
+      if (spLiveSources.NOAA === 'connected' || spLiveSources.NOAA === 'unavailable') out.NOAA = spLiveSources.NOAA;
+    }
+    if (typeof spWeatherOK !== 'undefined' && spWeatherOK === true) out.NWS = 'connected';
+    if (typeof spRadarOK !== 'undefined' && spRadarOK === true) out.NOAA = 'connected';
+  } catch (e) {}
   return out;
+}
+
+function spLiveConfidence() {
+  try {
+    const gps = (typeof spGPSAvailable !== 'undefined') && spGPSAvailable === true && spCoords && Number.isFinite(spCoords.lat);
+    const acc = (spCoords && Number.isFinite(Number(spCoords.accuracy))) ? Number(spCoords.accuracy) : null;
+    const nws = (typeof spWeatherOK !== 'undefined') && spWeatherOK === true;
+    const radar = (typeof spRadarOK !== 'undefined') && spRadarOK === true;
+    const pts = [];
+    if (gps) {
+      if (acc !== null && acc <= 15) pts.push(96);
+      else if (acc !== null && acc <= 40) pts.push(88);
+      else if (acc !== null && acc <= 80) pts.push(76);
+      else pts.push(70);
+    }
+    if (nws) pts.push(92);
+    if (radar) pts.push(90);
+    if (!pts.length) {
+      return { confPercent: null, confLevel: 'unknown', confLevelLabel: 'UNKNOWN' };
+    }
+    const pct = Math.round(pts.reduce(function (a, b) { return a + b; }, 0) / pts.length);
+    const level = pct >= 90 ? 'high' : pct >= 70 ? 'medium' : 'low';
+    return { confPercent: pct, confLevel: level, confLevelLabel: level.toUpperCase() };
+  } catch (e) {
+    return { confPercent: null, confLevel: 'unknown', confLevelLabel: 'UNKNOWN' };
+  }
 }
 
 function spRuntimeStateData(stateData) {
   if (!stateData || typeof stateData !== 'object') return stateData;
+  let live;
+  try { live = spLiveConfidence(); } catch (e) { live = null; }
   return {
     label: stateData.label,
-    confPercent: stateData.confPercent,
-    confLevel: stateData.confLevel,
-    confLevelLabel: stateData.confLevelLabel,
+    confPercent: live ? live.confPercent : stateData.confPercent,
+    confLevel: live ? live.confLevel : stateData.confLevel,
+    confLevelLabel: live ? live.confLevelLabel : stateData.confLevelLabel,
     icon: stateData.icon,
     action: stateData.action,
     reason: stateData.reason,
     fallback: stateData.fallback,
-    showPlaceholder: stateData.showPlaceholder,
+    showPlaceholder: false,
     conflictFlag: stateData.conflictFlag,
     staleFlag: stateData.staleFlag,
     sources: spSourcesForState(stateData)
@@ -4593,7 +4532,7 @@ const SP_STATES = {
   normal: {
     label:'NORMAL', confPercent:null, confLevel:'unknown', confLevelLabel:'UNKNOWN',
     icon:'✓', action:'CONTINUE ROUTE',
-    reason:'No active NWS alerts for your location. Non-weather categories remain prototype data — not live.',
+    reason:'No active NWS alerts for your location.',
     fallback:'If NWS alerts are issued for your route, Storm Path will escalate automatically.',
     showPlaceholder:true,
     sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
@@ -4705,7 +4644,7 @@ function spSetState(stateKey) {
     if (actionText)   actionText.textContent   = data.action;
     if (reasonText)   reasonText.textContent   = data.reason;
     if (fallbackText) fallbackText.textContent = data.fallback;
-    if (placeholder)  placeholder.style.display = data.showPlaceholder ? 'inline-block' : 'none';
+    if (placeholder)  placeholder.style.display = 'none';
 
     const panel = document.getElementById('sp-source-panel');
     if (panel) spRenderSourceChips(panel, runtime.sources);
@@ -4786,7 +4725,7 @@ function runStartupSafetyChecks() {
   if (radarImgFailed.length > 0) failures.push('RADARIMG');
 
   // Leaflet is an authorized runtime (Layer 2 web-deploy sprint). CDN block → SAFE MODE.
-  if (typeof L !== 'function' || typeof L.map !== 'function') {
+  if (typeof L === 'undefined' || typeof L.map !== 'function') {
     failures.push('LEAFLET');
   }
 
@@ -4991,7 +4930,7 @@ function runStartupSafetyChecks() {
   if (reasonText)   reasonText.textContent   = data.reason;
   if (fallbackText) fallbackText.textContent = data.fallback;
   if (placeholderBadge) {
-    placeholderBadge.style.display = data.showPlaceholder ? 'inline-block' : 'none';
+    placeholderBadge.style.display = 'none';
   }
 
   const panel = document.getElementById('sp-source-panel');
@@ -5002,14 +4941,15 @@ function runStartupSafetyChecks() {
 })();
 
 // ────────────────────────────────────────────────
-//  REAL DEVICE GPS — replaces hardcoded 37.7749°N, 122.4194°W
+//  REAL DEVICE GPS — Murphysboro (37.7645°N, 89.3351°W) is VIEW only. San Francisco is not used.
 //  Initial fix via getCurrentPosition(), then continuous updates
 //  via watchPosition(). Any permission denial / unavailable GPS
 //  routes into the SAFE MODE pattern instead of crashing or
 //  silently keeping the fake coordinates.
 // ────────────────────────────────────────────────
-let spCoords = { lat: null, lon: null, accuracy: null, speedMps: null, heading: null };
-let spGPSAvailable = false;
+// GPS flags are declared with weather/radar so drawMap/spRecomputeState
+// never hit the temporal dead zone during boot.
+// let spCoords / let spGPSAvailable live next to spWeatherOK.
 let spGPSWatchId = null;
 let spFixPrev = { lat: null, lon: null, t: 0 };
 let spSpeedEma = 0;
@@ -5017,10 +4957,8 @@ let spAccepted = { lat: null, lon: null };
 let spStillTicks = 0;
 const SP_STILL_MPS = 0.45;
 
-// Anchor point for projecting real GPS deltas onto the illustrative
-// (non-geo-referenced) map canvas. Matches the prototype's original
-// hardcoded location so the fixed street layout stays a sensible fit.
-const SP_MAP_ANCHOR = { lat: 37.7749, lon: -122.4194 };
+// Anchor for the leftover canvas fallback only. Leaflet uses spBias() / Murphysboro.
+const SP_MAP_ANCHOR = { lat: 37.7645, lon: -89.3351 }; /* Murphysboro, IL — view only */
 const SP_METERS_PER_PIXEL = 8; // approximate scale of the illustrative map at zoom 1.0
 
 function spGeoToCanvasOffset(lat, lon, zoom) {
@@ -5140,6 +5078,8 @@ function spOnPositionSuccess(pos) {
   spCoords.accuracy = acc;
   spGPSAvailable = true;
   spSetGPSStatus('GPS LIVE', 'var(--green-safe)');
+  var _gate = document.getElementById('sp-gps-gate');
+  if (_gate) _gate.hidden = true;
   spUpdateCoordsDisplay();
   spApplyGpsToMarker();
   spPaintSpeed();
@@ -5164,19 +5104,27 @@ function spOnPositionSuccess(pos) {
 // path weather and radar failures use — never a silent fallback to fake
 // coordinates.
 function spOnPositionError(err) {
+  if (spGPSAvailable && err && err.code === err.TIMEOUT) {
+    return;
+  }
+  if (err && err.code !== err.PERMISSION_DENIED) {
+    /* keep last finite fix; only permission denial clears the AND-gate */
+    if (spGPSAvailable) return;
+  }
   spGPSAvailable = false;
   let reason;
   switch (err.code) {
     case err.PERMISSION_DENIED:    reason = 'GPS permission denied'; break;
     case err.POSITION_UNAVAILABLE: reason = 'GPS position unavailable'; break;
     case err.TIMEOUT:              reason = 'GPS fix timed out'; break;
-    default:                       reason = 'GPS error: ' + err.message;
+    default:                       reason = 'GPS error: ' + (err && err.message ? err.message : 'unknown');
   }
   console.warn('StormPath GPS failure — entering SAFE MODE. Reason: ' + reason);
   spSetGPSStatus('GPS ' + (err.code === err.PERMISSION_DENIED ? 'DENIED' : 'UNAVAILABLE'), 'var(--red-alert)');
   spUpdateCoordsDisplay();
   spRecomputeState();
   if (activeScreen === 'map') drawMap();
+  try { spTryNetworkFix(); } catch (e2) {}
 }
 
 function spInitGeolocation() {
@@ -5185,14 +5133,59 @@ function spInitGeolocation() {
     spSetGPSStatus('GPS UNAVAILABLE', 'var(--red-alert)');
     spUpdateCoordsDisplay();
     spRecomputeState();
+    try { spTryNetworkFix(); } catch (e) {}
     return;
   }
-  const gpsOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+  const gpsOptions = { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 };
   navigator.geolocation.getCurrentPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
   spGPSWatchId = navigator.geolocation.watchPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
 }
 
-spRecomputeState();
+var spNetworkFixTried = false;
+function spHideGpsGate() {
+  var gate = document.getElementById('sp-gps-gate');
+  if (gate) gate.hidden = true;
+}
+function spShowGpsGate() {
+  var gate = document.getElementById('sp-gps-gate');
+  if (gate && !spGPSAvailable) gate.hidden = false;
+}
+function spAcceptNetworkFix(lat, lon, acc) {
+  if (spGPSAvailable) return;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  /* Residential IP is VIEW, never the GPS AND-gate input. IP is never the GPS AND-gate input. */
+  spSetGPSStatus('VIEW · NETWORK', 'var(--amber)');
+  try { if (spLeaflet) spLeaflet.setView([lat, lon], 13, { animate: true }); } catch (e) {}
+  try { spFetchViewAtmosphere(lat, lon, 'network'); } catch (e) {}
+  spShowGpsGate();
+}
+function spTryNetworkFix() {
+  if (spGPSAvailable || spNetworkFixTried) return;
+  spNetworkFixTried = true;
+  fetch('https://get.geojs.io/v1/ip/geo.json').then(function (r) {
+    return r && r.ok ? r.json() : null;
+  }).then(function (body) {
+    if (spGPSAvailable || !body) { spShowGpsGate(); return; }
+    var lat = parseFloat(body.latitude);
+    var lon = parseFloat(body.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { spShowGpsGate(); return; }
+    var org = [body.organization, body.organization_name, body.asn, body.country].join(' ');
+    if (/google|amazon|aws|azure|microsoft|digitalocean|cloudflare|ovh|hetzner|linode|oracle|colo|datacenter|facebook|meta|cloud/i.test(org)) {
+      spShowGpsGate();
+      return;
+    }
+    var cc = String(body.country_code || body.country || '').toUpperCase();
+    if (cc && cc !== 'US' && cc !== 'USA' && cc.indexOf('UNITED STATES') < 0) { spShowGpsGate(); return; }
+    spAcceptNetworkFix(lat, lon, 5000);
+  }).catch(function () { spShowGpsGate(); });
+}
+function spRequestLiveLocation() {
+  spNetworkFixTried = false;
+  try { spInitGeolocation(); } catch (e) {}
+  setTimeout(function () { try { spTryNetworkFix(); } catch (e) {} }, 1400);
+}
+
+try { spRecomputeState(); } catch (e) { console.warn('StormPath boot state', e); }
 
 // ────────────────────────────────────────────────
 //  REAL NWS WEATHER — replaces hardcoded 74°F / 22 mph SW / 89% RH /
@@ -5332,6 +5325,51 @@ function spUpdateWeatherChips(data) {
   setAll('wx-val-pressure', data.pressureDisplay);
   setAll('wx-val-visibility', data.visibilityDisplay);
   setAll('wx-val-cape', data.capeDisplay);
+  document.querySelectorAll('.wx-chip').forEach(chip => {
+    const txt = (chip.textContent || '').replace(/\s+/g, ' ').trim();
+    const na = /\bN\/A\b/.test(txt) || txt === '--' || /\s--\s/.test(' ' + txt + ' ');
+    const hasNum = /\d/.test(txt);
+    if (!hasNum && (na || /Hg|VIS|CAPE/.test(txt))) chip.style.display = 'none';
+    else chip.style.display = '';
+  });
+}
+
+function spPaintNwsAlerts(alerts) {
+  const rows = [];
+  (alerts || []).forEach(f => {
+    const p = (f && f.properties) ? f.properties : {};
+    const ev = typeof p.event === 'string' ? p.event : 'NWS alert';
+    const sev = typeof p.severity === 'string' ? p.severity : '';
+    const hl = typeof p.headline === 'string' ? p.headline : (typeof p.areaDesc === 'string' ? p.areaDesc : ev);
+    rows.push({ ev: ev, sev: sev, hl: String(hl).slice(0, 180) });
+  });
+  function fill(id, empty) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = '';
+    if (!rows.length) {
+      el.textContent = empty;
+      return;
+    }
+    rows.slice(0, 8).forEach(r => {
+      const d = document.createElement('div');
+      d.className = 'sp-nws-row';
+      const top = document.createElement('div');
+      top.textContent = (r.sev ? r.sev.toUpperCase() + ' · ' : '') + r.ev;
+      const sub = document.createElement('div');
+      sub.className = 'sp-nws-sub';
+      sub.textContent = r.hl;
+      d.appendChild(top);
+      d.appendChild(sub);
+      el.appendChild(d);
+    });
+  }
+  const empty = 'No active NWS alerts at this location (api.weather.gov).';
+  fill('sp-nws-alert-list', empty);
+  fill('sp-nws-alert-list-wx', empty);
+  fill('sp-route-hazards', empty);
+  const nEl = document.getElementById('sp-map-alertn');
+  if (nEl) nEl.textContent = String(rows.length);
 }
 
 function spUpdateAlertTicker(alerts) {
@@ -5393,6 +5431,59 @@ function spEvaluateAlertState(alerts) {
   return worst;
 }
 
+var spViewAtmosphereTried = false;
+async function spFetchViewAtmosphere(lat, lon, why) {
+  if (spGPSAvailable) return;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  var badge = document.getElementById('wx-radar-status-badge');
+  if (badge && spWeatherOK !== true) {
+    badge.textContent = 'VIEW · ' + String(why || 'MAP').toUpperCase() + ' — NOT GPS';
+    badge.classList.remove('live');
+    badge.classList.remove('down');
+  }
+  try { if (typeof spRefreshLeafletRadar === 'function') spRefreshLeafletRadar(); } catch (e) {}
+  if (spViewAtmosphereTried) return;
+  spViewAtmosphereTried = true;
+  try {
+    const latQ = lat.toFixed(4), lonQ = lon.toFixed(4);
+    const points = await spNWSFetch('https://api.weather.gov/points/' + latQ + ',' + lonQ);
+    const pointProps = points && spIsPlainObject(points.properties) ? points.properties : null;
+    const office = pointProps && pointProps.gridId;
+    const gridX  = pointProps && pointProps.gridX;
+    const gridY  = pointProps && pointProps.gridY;
+    if (!office || gridX === undefined || gridY === undefined) return;
+    const [forecast, alertsResp] = await Promise.all([
+      spNWSFetch('https://api.weather.gov/gridpoints/' + office + '/' + gridX + ',' + gridY + '/forecast/hourly'),
+      spNWSFetch('https://api.weather.gov/alerts/active?point=' + latQ + ',' + lonQ)
+    ]);
+    if (spGPSAvailable) return;
+    const fProps = forecast && spIsPlainObject(forecast.properties) ? forecast.properties : null;
+    const period = fProps && Array.isArray(fProps.periods) ? fProps.periods[0] : null;
+    if (!period || !spIsPlainObject(period)) return;
+    const humidityVal = period.relativeHumidity && typeof period.relativeHumidity.value === 'number'
+      ? Math.round(period.relativeHumidity.value) + '%'
+      : 'N/A';
+    spUpdateWeatherChips({
+      tempDisplay: (typeof period.temperature === 'number')
+        ? period.temperature + '°' + (period.temperatureUnit || 'F')
+        : 'N/A',
+      windSpeedDisplay: period.windSpeed || 'N/A',
+      windDirDisplay: period.windDirection || '',
+      humidityDisplay: humidityVal,
+      pressureDisplay: 'N/A',
+      visibilityDisplay: 'N/A',
+      capeDisplay: 'N/A'
+    });
+    const alerts = (alertsResp && Array.isArray(alertsResp.features)) ? alertsResp.features : [];
+    spUpdateAlertTicker(alerts);
+    spPaintNwsAlerts(alerts);
+    var countEl = document.getElementById('wx-alert-count');
+    if (countEl) countEl.textContent = 'VIEW · ' + alerts.length + ' ALERT(S) — NOT GPS';
+  } catch (err) {
+    console.warn('StormPath VIEW atmosphere failed (SAFE MODE retained).', err && err.message ? err.message : err);
+  }
+}
+
 async function spFetchWeather(lat, lon) {
   if (spWeatherFetchInFlight) return;
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
@@ -5440,6 +5531,7 @@ async function spFetchWeather(lat, lon) {
 
     const alerts = (alertsResp && Array.isArray(alertsResp.features)) ? alertsResp.features : [];
     spUpdateAlertTicker(alerts);
+    spPaintNwsAlerts(alerts);
 
     const decidedState = spEvaluateAlertState(alerts);
     console.info('StormPath NWS weather fetch OK — office ' + office + ' grid ' + gridX + ',' + gridY + ' — ' +
@@ -5602,7 +5694,6 @@ const SP_INTEL_TYPES = {
   pothole: { label: 'SURFACE', desc: 'Pothole or damage', color: '#ffab00', subtypes: [] }
 };
 
-let spLeaflet = null;
 let spGpsMarker = null;
 let spDestMarker = null;
 let spRouteLine = null;
@@ -5712,7 +5803,7 @@ function spBias() {
     const c = spLeaflet.getCenter();
     return { lat: c.lat, lon: c.lng };
   }
-  return { lat: 38.627, lon: -90.1994 };
+  return { lat: 37.7645, lon: -89.3351 }; /* Murphysboro, IL — view only */
 }
 
 function spEnsureLeaflet() {
@@ -5737,20 +5828,15 @@ function spEnsureLeaflet() {
     zoomSnap: 0.5
   }).setView([bias.lat, bias.lon], 13);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap &copy; CARTO',
-    subdomains: 'abcd',
-    maxZoom: 19
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    className: 'sp-base-tiles'
   }).addTo(spLeaflet);
   spLeaflet.createPane('labels');
   spLeaflet.getPane('labels').style.zIndex = 450;
   spLeaflet.getPane('labels').style.pointerEvents = 'none';
-  spLabelLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-    pane: 'labels',
-    subdomains: 'abcd',
-    maxZoom: 19
-  });
-  if (spGetSet().labels !== false) spLabelLayer.addTo(spLeaflet);
+  spLabelLayer = null;
 
   spIntelLayer = L.layerGroup().addTo(spLeaflet);
 
@@ -6080,13 +6166,25 @@ function spCloseSheets() {
 }
 
 function spPlaceLabel(p) {
+  if (!p) return 'Selected place';
   if (p.name && p.city && p.state && p.name !== p.city) return p.name + ', ' + p.city + ', ' + p.state;
   if (p.name && p.state) return p.name + ', ' + p.state;
-  return p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || 'Selected place';
+  const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+  if (p.name) return p.name;
+  if (street && p.city) return street + ', ' + p.city;
+  if (street) return street;
+  if (p.city && p.state) return p.city + ', ' + p.state;
+  if (p.osm_value) return String(p.osm_value).replace(/_/g, ' ');
+  return 'Pinned place';
 }
 function spPlaceSub(p) {
-  return [p.street && p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : null, p.city, p.state]
+  const bits = [p.street && p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : null, p.city, p.state]
     .filter(Boolean).join(', ');
+  if (Number.isFinite(p._mi)) {
+    const d = p._mi < 10 ? p._mi.toFixed(1) : String(Math.round(p._mi));
+    return d + ' mi' + (bits ? ' · ' + bits : '');
+  }
+  return bits;
 }
 
 function spIsUsPlace(p) {
@@ -6112,9 +6210,13 @@ async function spPhotonSearch(q) {
   if (spSearchAbort) spSearchAbort.abort();
   spSearchAbort = new AbortController();
   const sig = spSearchAbort.signal;
-  const photonUrl = SP_PHOTON + '?q=' + encodeURIComponent(q) +
-    '&lat=' + bias.lat + '&lon=' + bias.lon + '&limit=8&lang=en';
-  const nomUrl = SP_NOMINATIM + '?format=jsonv2&addressdetails=1&countrycodes=us&dedupe=1&limit=8&q=' + encodeURIComponent(q);
+  const poi = spIsPoiQuery(q);
+  let photonUrl = SP_PHOTON + '?q=' + encodeURIComponent(q) +
+    '&lat=' + bias.lat + '&lon=' + bias.lon + '&limit=10&lang=en';
+  if (poi && poi.tag) photonUrl += '&osm_tag=' + encodeURIComponent(poi.tag);
+  const box = (bias.lon - 1.1) + ',' + (bias.lat + 0.9) + ',' + (bias.lon + 1.1) + ',' + (bias.lat - 0.9);
+  const nomUrl = SP_NOMINATIM + '?format=jsonv2&addressdetails=1&countrycodes=us&dedupe=1&limit=10&q=' + encodeURIComponent(q) +
+    '&viewbox=' + encodeURIComponent(box) + '&bounded=' + (poi ? '1' : '0');
   const omUrl = SP_OPENMETEO + '?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json&countryCode=US';
   const tasks = [
     spFetchOkJson(photonUrl, { signal: sig }, 8000).catch(() => ({ features: [] })),
@@ -6169,11 +6271,27 @@ async function spPhotonSearch(q) {
     seen[k] = 1;
     merged.push(p);
   }
-  spStateHits(q).forEach(push);
-  extra.forEach(push);
-  om.forEach(push);
   photon.forEach(push);
-  return merged.slice(0, 10);
+  extra.forEach(push);
+  if (!poi) {
+    om.forEach(push);
+    spStateHits(q).forEach(push);
+  }
+  const cap = poi ? 80 : 1200;
+  merged.forEach(p => {
+    p._mi = spHaversineMi(bias.lat, bias.lon, p.lat, p.lon);
+  });
+  merged.sort((a, b) => a._mi - b._mi);
+  return merged.filter(p => p._mi <= cap).slice(0, 10);
+}
+
+function spIsPoiQuery(q) {
+  const s = String(q || '').toLowerCase();
+  if (/gas station|fuel|petrol|charging/.test(s)) return { tag: 'amenity:fuel' };
+  if (/hospital|er\b|emergency room/.test(s)) return { tag: 'amenity:hospital' };
+  if (/grocery|supermarket|walmart/.test(s)) return { tag: 'shop:supermarket' };
+  if (/shelter/.test(s)) return { tag: 'amenity:social_facility' };
+  return null;
 }
 
 function spRenderResults(places, mode) {
@@ -6183,8 +6301,8 @@ function spRenderResults(places, mode) {
   if (!list) return;
   if (!places.length) {
     list.innerHTML = '<div class="sp-empty-hint">' + (mode === 'empty'
-      ? 'Type a US town, state, or full address. Results cover the entire United States.'
-      : 'No matches. Try a street name or city.') + '</div>';
+      ? 'Type a nearby place. Fuel / hospital / grocery use your GPS, not the whole country.'
+      : 'No nearby matches. Try a street name plus city.') + '</div>';
     return;
   }
   list.innerHTML = places.map((p, i) =>
@@ -6307,9 +6425,31 @@ function spHaversineMi(aLat, aLon, bLat, bLon) {
 }
 
 async function spGoDestination(placeArg) {
-  if (placeArg) spPendingPlace = placeArg;
-  if (!spPendingPlace) return;
-  const place = spPendingPlace;
+  // Click handlers pass an Event — never treat that as the destination.
+  if (placeArg && Number.isFinite(Number(placeArg.lat)) && Number.isFinite(Number(placeArg.lon))) {
+    spPendingPlace = placeArg;
+  }
+  const raw = spPendingPlace;
+  if (!raw) {
+    spToast('PICK A PLACE FIRST');
+    return;
+  }
+  const place = {
+    name: raw.name || null,
+    housenumber: raw.housenumber || null,
+    street: raw.street || null,
+    city: raw.city || null,
+    state: raw.state || null,
+    country: raw.country || 'United States',
+    osm_value: raw.osm_value || '',
+    lat: Number(raw.lat),
+    lon: Number(raw.lon),
+    _mi: raw._mi
+  };
+  if (!Number.isFinite(place.lat) || !Number.isFinite(place.lon)) {
+    spToast('THAT PLACE HAS NO MAP PIN · PICK ANOTHER');
+    return;
+  }
   const btn = document.getElementById('sp-go-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'BUILDING ROUTE…'; }
   spCloseSheets();
@@ -6320,7 +6460,10 @@ async function spGoDestination(placeArg) {
     spToast('DRIVE STARTED · ' + spPlaceLabel(place).toUpperCase());
   } catch (e) {
     console.warn('StormPath route failed', e);
-    spToast('DESTINATION SET · ROUTE UNAVAILABLE');
+    const msg = String(e && e.message || '');
+    spToast(msg.indexOf('too far') >= 0
+      ? 'TOO FAR FOR A DRIVE · PICK SOMETHING NEARER'
+      : 'ROUTE UNAVAILABLE · TRY A NEARER PLACE');
     spCommitDestination(place, true);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'START DRIVE'; }
@@ -6404,7 +6547,9 @@ function spDrawDestination(place, fit) {
   else spDestMarker = L.marker(latlng, { icon: icon, zIndexOffset: 650 }).addTo(spLeaflet);
   if (fit && spGpsMarker) {
     const g = spGpsMarker.getLatLng();
-    spLeaflet.fitBounds(L.latLngBounds([g, latlng]).pad(0.25));
+    const mi = spHaversineMi(g.lat, g.lng, place.lat, place.lon);
+    if (mi <= 80) spLeaflet.fitBounds(L.latLngBounds([g, latlng]).pad(0.28));
+    else spLeaflet.setView([g.lat, g.lng], 13);
   } else if (fit) {
     spLeaflet.setView(latlng, 14);
   }
@@ -6419,9 +6564,13 @@ async function spRouteTo(place) {
     spFillTurns([], 'Need a GPS fix to build a driving route.');
     return;
   }
+  const spanMi = spHaversineMi(spCoords.lat, spCoords.lon, place.lat, place.lon);
+  if (spanMi > 250) {
+    throw new Error('too far (' + Math.round(spanMi) + ' mi)');
+  }
   const url = SP_OSRM + spCoords.lon + ',' + spCoords.lat + ';' + place.lon + ',' + place.lat +
     '?overview=full&geometries=geojson&steps=true';
-  const json = await spFetchOkJson(url, {}, 12000);
+  const json = await spFetchOkJson(url, {}, 20000);
   if (!spIsPlainObject(json) || json.code !== 'Ok' || !Array.isArray(json.routes) || !json.routes[0]) throw new Error('osrm empty');
   const route = json.routes[0];
   if (!spIsPlainObject(route)) throw new Error('osrm empty');
@@ -6429,8 +6578,18 @@ async function spRouteTo(place) {
   const dist = document.getElementById('dist-val');
   if (eta) eta.textContent = spFmtMins(route.duration);
   if (dist) dist.textContent = spMiles(route.distance).toFixed(1);
+  const etaTxt = spFmtMins(route.duration) + ' min';
+  const distTxt = spMiles(route.distance).toFixed(1) + ' mi';
+  const mapEta = document.getElementById('sp-map-eta');
+  const mapDist = document.getElementById('sp-map-dist');
+  const wxEta = document.getElementById('sp-wx-eta');
+  const wxDist = document.getElementById('sp-wx-dist');
+  if (mapEta) mapEta.textContent = etaTxt;
+  if (mapDist) mapDist.textContent = distTxt;
+  if (wxEta) wxEta.textContent = etaTxt;
+  if (wxDist) wxDist.textContent = distTxt;
   const traffic = document.getElementById('sp-traffic-val');
-  if (traffic) { traffic.textContent = 'LIVE'; traffic.style.color = 'var(--cyan)'; }
+  if (traffic) { traffic.textContent = 'OSRM'; traffic.style.color = 'var(--cyan)'; }
   const wx = document.getElementById('sp-wx-val');
   if (wx && typeof spLastAlertState === 'string') {
     const map = { normal: 'CLR', caution: 'ADV', danger: 'SEV', stop: 'EXT' };
@@ -6772,8 +6931,9 @@ function spPaintSpeed() {
   if (live) live.textContent = spGPSAvailable ? 'GPS SPEED' : 'WAITING';
   if (homeSpd) homeSpd.textContent = (spGPSAvailable ? Math.round(shown) : 0) + ' ' + unit;
   if (lim) {
-    lim.style.display = spGetSet().limit === false ? 'none' : 'flex';
-    if (spSpeedLimitMph == null) lim.textContent = '--';
+    const showLim = spGetSet().limit !== false && spSpeedLimitMph != null;
+    lim.style.display = showLim ? 'flex' : 'none';
+    if (spSpeedLimitMph == null) lim.textContent = '';
     else lim.textContent = String(Math.round(metric ? spSpeedLimitMph * 1.60934 : spSpeedLimitMph));
   }
   if (ring) {
@@ -6942,6 +7102,7 @@ function spDeleteIntel(id) {
 }
 
 function spRecenter() {
+  if (!spGPSAvailable) { try { spRequestLiveLocation(); } catch (e) {} }
   spEnsureLeaflet();
   if (!spLeaflet) return;
   spFollowGps = true;
@@ -7225,7 +7386,7 @@ function spBindNavUi() {
     document.getElementById('sp-preview')?.classList.remove('show');
     spPendingPlace = null;
   });
-  document.getElementById('sp-go-btn')?.addEventListener('click', spGoDestination);
+  document.getElementById('sp-go-btn')?.addEventListener('click', function () { spGoDestination(); });
   document.getElementById('sp-go-later')?.addEventListener('click', spOpenLater);
   document.getElementById('sp-later-save')?.addEventListener('click', spSavePlan);
   document.querySelectorAll('[data-later]').forEach(btn => {
@@ -7301,7 +7462,40 @@ function spBootNav() {
   setInterval(spTickTrip, 1000);
   requestAnimationFrame(() => {
     try { spEnsureLeaflet(); } catch (e) {}
-    try { spInitGeolocation(); } catch (e) {}
+    try {
+      var kick = function () { try { if (spLeaflet) spLeaflet.invalidateSize(); } catch (e2) {} };
+      window.addEventListener('resize', kick);
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', kick);
+      var wrap = document.getElementById('mapWrap');
+      if (wrap && window.ResizeObserver) new ResizeObserver(kick).observe(wrap);
+      setTimeout(kick, 200);
+      setTimeout(kick, 800);
+    } catch (e) {}
+    try {
+      var view = spBias();
+      spFetchViewAtmosphere(view.lat, view.lon, 'murphysboro');
+    } catch (e) {}
+    try { spRequestLiveLocation(); } catch (e) {}
+    var gpsGateBtn = document.getElementById('sp-gps-gate');
+    if (gpsGateBtn && !gpsGateBtn.dataset.spBound) {
+      gpsGateBtn.dataset.spBound = '1';
+      gpsGateBtn.addEventListener('click', function () { try { spRequestLiveLocation(); } catch (e) {} });
+    }
+    var gpsChip = document.getElementById('top-gps-label');
+    if (gpsChip && !gpsChip.dataset.spBound) {
+      gpsChip.dataset.spBound = '1';
+      gpsChip.style.cursor = 'pointer';
+      gpsChip.title = 'Tap to request location';
+      gpsChip.addEventListener('click', function () {
+        try { spRequestLiveLocation(); } catch (e) {}
+      });
+    }
+    if (!/(?:\?|&)dev=1(?:&|$)/.test(location.search)) {
+      const dt = document.getElementById('sp-dev-toggle');
+      const dp = document.getElementById('sp-dev-panel');
+      if (dt) dt.style.display = 'none';
+      if (dp) { dp.style.display = 'none'; dp.classList.remove('show'); }
+    }
   });
 }
 if (document.readyState === 'loading') {

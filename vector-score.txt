@@ -1,15 +1,23 @@
-SP_WEB_VECTOR_SCORE 87/87 100.0% PASS
+SP_WEB_VECTOR_SCORE 135/135 100% PASS
 PASS  engine  +8  CORE_SP_STATES  spSetState + SP_STATES
 PASS  engine  +6  CORE_SWITCH  switchScreen
 PASS  engine  +8  CORE_NWS  spFetchWeather
 PASS  engine  +6  CORE_CONF  confidence
-PASS  engine  +10  AND_GATE  and-gate present
-PASS  engine  +8  VIEW_MURPHYSBORO  no STL default
+PASS  engine  +10  AND_GATE  GPS∧NWS∧radar or SAFE
+PASS  engine  +8  VIEW_MURPHYSBORO  Murphysboro view; San Francisco gone
 PASS  engine  +6  GPS_API  geolocation
-PASS  engine  +8  GPS_NETWORK  residential IP fallback
+PASS  engine  +8  GPS_NETWORK_IS_VIEW  residential IP is VIEW not GPS
 PASS  hud     +5  GPS_GATE_UI  gate button
 PASS  hud     +5  OSM_TILES  OSM no Carto
 PASS  engine  +6  RADAR_WMS  NOAA WMS
 PASS  hud     +4  LIVE_CHIPS  GPS/NOAA/NWS chips
-PASS  github  +4  PAGES_CORE  recompute
+PASS  hud     +8  MAP_HEIGHT_LOCK  iPhone map pane height 100%
+PASS  engine  +6  VIEW_ATMOSPHERE  VIEW NWS without AND-gate
+PASS  hud     +4  LEAFLET_BOOT  Leaflet map boot
 PASS  github  +3  TELEMETRY  telemetry include
+PASS  github  +4  PAGES_CORE  recompute
+PASS  github  +3  README_ORG_URL  org Pages URL
+PASS  hud     +3  NO_CARTO  Carto removed
+PASS  runtime +10  RUNTIME_NWS_POINTS  Murphysboro /points live 2xx
+PASS  runtime +8  RUNTIME_NOAA_WMS  WMS live 2xx
+PASS  runtime +6  RUNTIME_OSM_TILE  OSM live 2xx

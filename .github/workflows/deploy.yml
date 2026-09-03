@@ -18,6 +18,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url || steps.pages.outputs.page_url }}
@@ -64,4 +68,4 @@ jobs:
       - name: Legacy branch source notice
         if: steps.pages.outputs.build_type != 'workflow'
         run: |
-          echo "::notice::GitHub Pages is still Deploy-from-a-branch (${{ steps.pages.outputs.source_branch }}). actions/deploy-pages is skipped so this job does not hang. Switch Settings → Pages → Source to GitHub Actions to activate artifact deploy. Live URL: ${{ steps.pages.outputs.page_url }}"
+          echo "::notice::GitHub Pages is Deploy-from-a-branch (${{ steps.pages.outputs.source_branch }}). actions/deploy-pages is skipped. Live URL: ${{ steps.pages.outputs.page_url }}"
