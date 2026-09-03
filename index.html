@@ -537,15 +537,13 @@
 
   .hud-nextturn {
     position: absolute;
-    bottom: 72px;
-    left: 12px;
-    right: 72px;
+    bottom: 80px; left: 16px;
     z-index: 10;
     background: rgba(6,13,20,0.92);
     border: 1px solid var(--amber);
     border-left: 4px solid var(--amber);
-    padding: 10px 12px;
-    min-width: 0;
+    padding: 12px 16px;
+    min-width: 200px;
     box-shadow: 0 0 20px rgba(255,171,0,0.1);
   }
 
@@ -1928,25 +1926,14 @@ body {
   .map-wrap.live-map .leaflet-control-attribution a { color: var(--cyan-dim); }
   .map-wrap.live-map .leaflet-control-zoom { display: none; }
 
-  .map-wrap.live-map .leaflet-control-attribution {
-    bottom: 60px !important;
-    left: auto !important;
-    right: 8px !important;
-    max-width: 38%;
-  }
-  .sp-vehicle-btn span, .sp-intel-btn span {
-    font-size: 0.5rem;
-    letter-spacing: 0.4px;
-  }
-  .sp-vehicle-btn, .sp-intel-btn { width: 46px; min-width: 46px; flex: 0 0 46px; }
   .sp-nav-dock {
     position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
     z-index: 20;
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: stretch;
     pointer-events: none;
   }
@@ -4339,10 +4326,12 @@ function spRenderSourceChips(containerEl, sources) {
   if (!containerEl) return;
   containerEl.innerHTML = '';
   const normalized = spNormalizeSourceStatuses(sources);
-  const rows = [];
-  rows.push(['GPS', spGPSAvailable ? 'connected' : 'unavailable']);
-  rows.push(['NOAA', normalized.NOAA === 'connected' ? 'connected' : 'unavailable']);
-  rows.push(['NWS', normalized.NWS === 'connected' ? 'connected' : 'unavailable']);
+  const gpsOk = (typeof spGPSAvailable !== 'undefined') && !!spGPSAvailable;
+  const rows = [
+    ['GPS', gpsOk ? 'connected' : 'unavailable'],
+    ['NOAA', normalized.NOAA === 'connected' ? 'connected' : 'unavailable'],
+    ['NWS', normalized.NWS === 'connected' ? 'connected' : 'unavailable']
+  ];
   rows.forEach(function (row) {
     const chip = document.createElement('div');
     chip.className = 'sp-source-chip src-' + row[1];
@@ -4409,47 +4398,52 @@ function spPromoteLiveSource(key, status) {
 
 function spSourcesForState(stateData) {
   const out = spNormalizeSourceStatuses(stateData && stateData.sources);
-  if (spLiveSources) {
-    if (spLiveSources.NWS === 'connected' || spLiveSources.NWS === 'unavailable') out.NWS = spLiveSources.NWS;
-    if (spLiveSources.NOAA === 'connected' || spLiveSources.NOAA === 'unavailable') out.NOAA = spLiveSources.NOAA;
-  }
-  if (spWeatherOK === true) out.NWS = 'connected';
-  else if (spWeatherOK === false) out.NWS = 'unavailable';
-  if (spRadarOK === true) out.NOAA = 'connected';
-  else if (spRadarOK === false) out.NOAA = 'unavailable';
+  try {
+    if (spLiveSources) {
+      if (spLiveSources.NWS === 'connected' || spLiveSources.NWS === 'unavailable') out.NWS = spLiveSources.NWS;
+      if (spLiveSources.NOAA === 'connected' || spLiveSources.NOAA === 'unavailable') out.NOAA = spLiveSources.NOAA;
+    }
+    if (typeof spWeatherOK !== 'undefined' && spWeatherOK === true) out.NWS = 'connected';
+    if (typeof spRadarOK !== 'undefined' && spRadarOK === true) out.NOAA = 'connected';
+  } catch (e) {}
   return out;
 }
 
 function spLiveConfidence() {
-  const gps = spGPSAvailable === true && Number.isFinite(spCoords.lat);
-  const acc = Number(spCoords && spCoords.accuracy);
-  const nws = spWeatherOK === true;
-  const radar = spRadarOK === true;
-  const pts = [];
-  if (gps) {
-    if (Number.isFinite(acc) && acc <= 15) pts.push(96);
-    else if (Number.isFinite(acc) && acc <= 40) pts.push(88);
-    else if (Number.isFinite(acc) && acc <= 80) pts.push(76);
-    else pts.push(70);
-  }
-  if (nws) pts.push(92);
-  if (radar) pts.push(90);
-  if (!pts.length) {
+  try {
+    const gps = (typeof spGPSAvailable !== 'undefined') && spGPSAvailable === true && spCoords && Number.isFinite(spCoords.lat);
+    const acc = (spCoords && Number.isFinite(Number(spCoords.accuracy))) ? Number(spCoords.accuracy) : null;
+    const nws = (typeof spWeatherOK !== 'undefined') && spWeatherOK === true;
+    const radar = (typeof spRadarOK !== 'undefined') && spRadarOK === true;
+    const pts = [];
+    if (gps) {
+      if (acc !== null && acc <= 15) pts.push(96);
+      else if (acc !== null && acc <= 40) pts.push(88);
+      else if (acc !== null && acc <= 80) pts.push(76);
+      else pts.push(70);
+    }
+    if (nws) pts.push(92);
+    if (radar) pts.push(90);
+    if (!pts.length) {
+      return { confPercent: null, confLevel: 'unknown', confLevelLabel: 'UNKNOWN' };
+    }
+    const pct = Math.round(pts.reduce(function (a, b) { return a + b; }, 0) / pts.length);
+    const level = pct >= 90 ? 'high' : pct >= 70 ? 'medium' : 'low';
+    return { confPercent: pct, confLevel: level, confLevelLabel: level.toUpperCase() };
+  } catch (e) {
     return { confPercent: null, confLevel: 'unknown', confLevelLabel: 'UNKNOWN' };
   }
-  const pct = Math.round(pts.reduce(function (a, b) { return a + b; }, 0) / pts.length);
-  const level = pct >= 90 ? 'high' : pct >= 70 ? 'medium' : 'low';
-  return { confPercent: pct, confLevel: level, confLevelLabel: level.toUpperCase() };
 }
 
 function spRuntimeStateData(stateData) {
   if (!stateData || typeof stateData !== 'object') return stateData;
-  const live = spLiveConfidence();
+  let live;
+  try { live = spLiveConfidence(); } catch (e) { live = null; }
   return {
     label: stateData.label,
-    confPercent: live.confPercent,
-    confLevel: live.confLevel,
-    confLevelLabel: live.confLevelLabel,
+    confPercent: live ? live.confPercent : stateData.confPercent,
+    confLevel: live ? live.confLevel : stateData.confLevel,
+    confLevelLabel: live ? live.confLevelLabel : stateData.confLevelLabel,
     icon: stateData.icon,
     action: stateData.action,
     reason: stateData.reason,
@@ -5079,7 +5073,7 @@ function spInitGeolocation() {
   spGPSWatchId = navigator.geolocation.watchPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
 }
 
-spRecomputeState();
+try { spRecomputeState(); } catch (e) { console.warn('StormPath boot state', e); }
 
 // ────────────────────────────────────────────────
 //  REAL NWS WEATHER — replaces hardcoded 74°F / 22 mph SW / 89% RH /
