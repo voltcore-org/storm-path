@@ -2386,6 +2386,7 @@ body {
     font-weight: 600;
     color: var(--text-primary);
   }
+  .sp-result-name { font-size: 0.92rem; font-weight: 650; }
   .sp-result-sub {
     font-size: 0.72rem;
     color: var(--text-secondary);
@@ -5968,8 +5969,13 @@ function spPlaceLabel(p) {
   return p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || 'Selected place';
 }
 function spPlaceSub(p) {
-  return [p.street && p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : null, p.city, p.state]
+  const bits = [p.street && p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : null, p.city, p.state]
     .filter(Boolean).join(', ');
+  if (Number.isFinite(p._mi)) {
+    const d = p._mi < 10 ? p._mi.toFixed(1) : String(Math.round(p._mi));
+    return d + ' mi' + (bits ? ' · ' + bits : '');
+  }
+  return bits;
 }
 
 function spIsUsPlace(p) {
@@ -5995,9 +6001,13 @@ async function spPhotonSearch(q) {
   if (spSearchAbort) spSearchAbort.abort();
   spSearchAbort = new AbortController();
   const sig = spSearchAbort.signal;
-  const photonUrl = SP_PHOTON + '?q=' + encodeURIComponent(q) +
-    '&lat=' + bias.lat + '&lon=' + bias.lon + '&limit=8&lang=en';
-  const nomUrl = SP_NOMINATIM + '?format=jsonv2&addressdetails=1&countrycodes=us&dedupe=1&limit=8&q=' + encodeURIComponent(q);
+  const poi = spIsPoiQuery(q);
+  let photonUrl = SP_PHOTON + '?q=' + encodeURIComponent(q) +
+    '&lat=' + bias.lat + '&lon=' + bias.lon + '&limit=10&lang=en';
+  if (poi && poi.tag) photonUrl += '&osm_tag=' + encodeURIComponent(poi.tag);
+  const box = (bias.lon - 1.1) + ',' + (bias.lat + 0.9) + ',' + (bias.lon + 1.1) + ',' + (bias.lat - 0.9);
+  const nomUrl = SP_NOMINATIM + '?format=jsonv2&addressdetails=1&countrycodes=us&dedupe=1&limit=10&q=' + encodeURIComponent(q) +
+    '&viewbox=' + encodeURIComponent(box) + '&bounded=' + (poi ? '1' : '0');
   const omUrl = SP_OPENMETEO + '?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json&countryCode=US';
   const tasks = [
     spFetchOkJson(photonUrl, { signal: sig }, 8000).catch(() => ({ features: [] })),
@@ -6052,11 +6062,27 @@ async function spPhotonSearch(q) {
     seen[k] = 1;
     merged.push(p);
   }
-  spStateHits(q).forEach(push);
-  extra.forEach(push);
-  om.forEach(push);
   photon.forEach(push);
-  return merged.slice(0, 10);
+  extra.forEach(push);
+  if (!poi) {
+    om.forEach(push);
+    spStateHits(q).forEach(push);
+  }
+  const cap = poi ? 80 : 1200;
+  merged.forEach(p => {
+    p._mi = spHaversineMi(bias.lat, bias.lon, p.lat, p.lon);
+  });
+  merged.sort((a, b) => a._mi - b._mi);
+  return merged.filter(p => p._mi <= cap).slice(0, 10);
+}
+
+function spIsPoiQuery(q) {
+  const s = String(q || '').toLowerCase();
+  if (/gas station|fuel|petrol|charging/.test(s)) return { tag: 'amenity:fuel' };
+  if (/hospital|er\b|emergency room/.test(s)) return { tag: 'amenity:hospital' };
+  if (/grocery|supermarket|walmart/.test(s)) return { tag: 'shop:supermarket' };
+  if (/shelter/.test(s)) return { tag: 'amenity:social_facility' };
+  return null;
 }
 
 function spRenderResults(places, mode) {
@@ -6066,8 +6092,8 @@ function spRenderResults(places, mode) {
   if (!list) return;
   if (!places.length) {
     list.innerHTML = '<div class="sp-empty-hint">' + (mode === 'empty'
-      ? 'Type a US town, state, or full address. Results cover the entire United States.'
-      : 'No matches. Try a street name or city.') + '</div>';
+      ? 'Type a nearby place. Fuel / hospital / grocery use your GPS, not the whole country.'
+      : 'No nearby matches. Try a street name plus city.') + '</div>';
     return;
   }
   list.innerHTML = places.map((p, i) =>
@@ -6203,7 +6229,10 @@ async function spGoDestination(placeArg) {
     spToast('DRIVE STARTED · ' + spPlaceLabel(place).toUpperCase());
   } catch (e) {
     console.warn('StormPath route failed', e);
-    spToast('DESTINATION SET · ROUTE UNAVAILABLE');
+    const msg = String(e && e.message || '');
+    spToast(msg.indexOf('too far') >= 0
+      ? 'TOO FAR FOR A DRIVE · PICK SOMETHING NEARER'
+      : 'ROUTE UNAVAILABLE · TRY A NEARER PLACE');
     spCommitDestination(place, true);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'START DRIVE'; }
@@ -6287,7 +6316,9 @@ function spDrawDestination(place, fit) {
   else spDestMarker = L.marker(latlng, { icon: icon, zIndexOffset: 650 }).addTo(spLeaflet);
   if (fit && spGpsMarker) {
     const g = spGpsMarker.getLatLng();
-    spLeaflet.fitBounds(L.latLngBounds([g, latlng]).pad(0.25));
+    const mi = spHaversineMi(g.lat, g.lng, place.lat, place.lon);
+    if (mi <= 80) spLeaflet.fitBounds(L.latLngBounds([g, latlng]).pad(0.28));
+    else spLeaflet.setView([g.lat, g.lng], 13);
   } else if (fit) {
     spLeaflet.setView(latlng, 14);
   }
@@ -6302,9 +6333,13 @@ async function spRouteTo(place) {
     spFillTurns([], 'Need a GPS fix to build a driving route.');
     return;
   }
+  const spanMi = spHaversineMi(spCoords.lat, spCoords.lon, place.lat, place.lon);
+  if (spanMi > 250) {
+    throw new Error('too far (' + Math.round(spanMi) + ' mi)');
+  }
   const url = SP_OSRM + spCoords.lon + ',' + spCoords.lat + ';' + place.lon + ',' + place.lat +
     '?overview=full&geometries=geojson&steps=true';
-  const json = await spFetchOkJson(url, {}, 12000);
+  const json = await spFetchOkJson(url, {}, 20000);
   if (!spIsPlainObject(json) || json.code !== 'Ok' || !Array.isArray(json.routes) || !json.routes[0]) throw new Error('osrm empty');
   const route = json.routes[0];
   if (!spIsPlainObject(route)) throw new Error('osrm empty');
