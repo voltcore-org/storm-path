@@ -5964,9 +5964,16 @@ function spCloseSheets() {
 }
 
 function spPlaceLabel(p) {
+  if (!p) return 'Selected place';
   if (p.name && p.city && p.state && p.name !== p.city) return p.name + ', ' + p.city + ', ' + p.state;
   if (p.name && p.state) return p.name + ', ' + p.state;
-  return p.name || [p.housenumber, p.street].filter(Boolean).join(' ') || 'Selected place';
+  const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+  if (p.name) return p.name;
+  if (street && p.city) return street + ', ' + p.city;
+  if (street) return street;
+  if (p.city && p.state) return p.city + ', ' + p.state;
+  if (p.osm_value) return String(p.osm_value).replace(/_/g, ' ');
+  return 'Pinned place';
 }
 function spPlaceSub(p) {
   const bits = [p.street && p.name ? [p.housenumber, p.street].filter(Boolean).join(' ') : null, p.city, p.state]
@@ -6216,9 +6223,31 @@ function spHaversineMi(aLat, aLon, bLat, bLon) {
 }
 
 async function spGoDestination(placeArg) {
-  if (placeArg) spPendingPlace = placeArg;
-  if (!spPendingPlace) return;
-  const place = spPendingPlace;
+  // Click handlers pass an Event — never treat that as the destination.
+  if (placeArg && Number.isFinite(Number(placeArg.lat)) && Number.isFinite(Number(placeArg.lon))) {
+    spPendingPlace = placeArg;
+  }
+  const raw = spPendingPlace;
+  if (!raw) {
+    spToast('PICK A PLACE FIRST');
+    return;
+  }
+  const place = {
+    name: raw.name || null,
+    housenumber: raw.housenumber || null,
+    street: raw.street || null,
+    city: raw.city || null,
+    state: raw.state || null,
+    country: raw.country || 'United States',
+    osm_value: raw.osm_value || '',
+    lat: Number(raw.lat),
+    lon: Number(raw.lon),
+    _mi: raw._mi
+  };
+  if (!Number.isFinite(place.lat) || !Number.isFinite(place.lon)) {
+    spToast('THAT PLACE HAS NO MAP PIN · PICK ANOTHER');
+    return;
+  }
   const btn = document.getElementById('sp-go-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'BUILDING ROUTE…'; }
   spCloseSheets();
@@ -7154,7 +7183,7 @@ function spBindNavUi() {
     document.getElementById('sp-preview')?.classList.remove('show');
     spPendingPlace = null;
   });
-  document.getElementById('sp-go-btn')?.addEventListener('click', spGoDestination);
+  document.getElementById('sp-go-btn')?.addEventListener('click', function () { spGoDestination(); });
   document.getElementById('sp-go-later')?.addEventListener('click', spOpenLater);
   document.getElementById('sp-later-save')?.addEventListener('click', spSavePlan);
   document.querySelectorAll('[data-later]').forEach(btn => {
