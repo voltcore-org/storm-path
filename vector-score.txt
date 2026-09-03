@@ -1,0 +1,15 @@
+SP_WEB_VECTOR_SCORE 87/87 100.0% PASS
+PASS  engine  +8  CORE_SP_STATES  spSetState + SP_STATES
+PASS  engine  +6  CORE_SWITCH  switchScreen
+PASS  engine  +8  CORE_NWS  spFetchWeather
+PASS  engine  +6  CORE_CONF  confidence
+PASS  engine  +10  AND_GATE  and-gate present
+PASS  engine  +8  VIEW_MURPHYSBORO  no STL default
+PASS  engine  +6  GPS_API  geolocation
+PASS  engine  +8  GPS_NETWORK  residential IP fallback
+PASS  hud     +5  GPS_GATE_UI  gate button
+PASS  hud     +5  OSM_TILES  OSM no Carto
+PASS  engine  +6  RADAR_WMS  NOAA WMS
+PASS  hud     +4  LIVE_CHIPS  GPS/NOAA/NWS chips
+PASS  github  +4  PAGES_CORE  recompute
+PASS  github  +3  TELEMETRY  telemetry include
