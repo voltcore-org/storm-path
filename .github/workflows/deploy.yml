@@ -28,7 +28,7 @@ jobs:
       - name: Stage static site
         run: |
           mkdir -p _site
-          cp index.html StormpathV1_3_5.html 404.html .nojekyll _site/
+          cp index.html telemetry.js StormpathV1_3_5.html 404.html .nojekyll _site/
           cp -R intel vehicles _site/
 
       - name: Read Pages configuration
