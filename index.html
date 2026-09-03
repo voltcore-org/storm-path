@@ -2978,49 +2978,7 @@ body {
   }
 
 </style>
-<script>
-(function(){
-  var SRC="storm-path";
-  var URL="https://core-api.dominic-calandro1991.workers.dev/api/v1/events";
-  var frames=0, last=performance.now(), fps=0;
-  function tick(t){
-    frames++;
-    if(t-last>=1000){ fps=frames; frames=0; last=t; }
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-  function emit(type,severity,payload){
-    try{
-      fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:SRC,type:type,severity:severity,payload:payload||{}}),keepalive:true}).catch(function(){});
-    }catch(e){}
-  }
-  function health(){
-    var gps=(document.getElementById("top-gps-label")||{}).textContent||"";
-    var radar=(document.getElementById("top-radar-label")||{}).textContent||"";
-    var acquiring=/ACQUIR/i.test(gps);
-    var gpsOk=/FIX|LOCK|READY|OK|ACTIVE/i.test(gps) && !acquiring;
-    var radarDown=/FAIL|OFF|STALE|ERROR/i.test(radar);
-    return {
-      gps_accuracy: acquiring ? 0 : (gpsOk ? 1 : 0.45),
-      nws_radar_status: Boolean(radar) && !radarDown,
-      weather_api_health: Boolean(radar) && !radarDown,
-      frame_rate: fps,
-      gps_label: String(gps).trim(),
-      radar_label: String(radar).trim()
-    };
-  }
-  window.addEventListener("error",function(e){
-    emit("runtime.error","error",Object.assign({message:String(e.message||""),filename:String(e.filename||""),lineno:e.lineno||0}, health()));
-  });
-  window.addEventListener("unhandledrejection",function(e){
-    emit("runtime.error","error",Object.assign({reason:String(e.reason||"")}, health()));
-  });
-  function boot(){ emit("app.event","info",Object.assign({status:"boot"}, health())); }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
-  setInterval(function(){ emit("health.heartbeat","info",health()); }, 30000);
-})();
-</script>
+<script src="telemetry.js?v=20260903c"></script>
 </head>
 <body>
 
