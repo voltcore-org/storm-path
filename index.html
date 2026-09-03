@@ -2977,6 +2977,10 @@ body {
     }
   }
 
+
+  #sp-leaflet .sp-base-tiles {
+    filter: invert(1) hue-rotate(180deg) brightness(0.88) contrast(0.92);
+  }
 </style>
 <script src="telemetry.js?v=20260903c"></script>
 </head>
@@ -4769,7 +4773,7 @@ function runStartupSafetyChecks() {
   if (radarImgFailed.length > 0) failures.push('RADARIMG');
 
   // Leaflet is an authorized runtime (Layer 2 web-deploy sprint). CDN block → SAFE MODE.
-  if (typeof L !== 'function' || typeof L.map !== 'function') {
+  if (typeof L === 'undefined' || typeof L.map !== 'function') {
     failures.push('LEAFLET');
   }
 
@@ -5147,13 +5151,20 @@ function spOnPositionSuccess(pos) {
 // path weather and radar failures use — never a silent fallback to fake
 // coordinates.
 function spOnPositionError(err) {
+  if (spGPSAvailable && err && err.code === err.TIMEOUT) {
+    return;
+  }
+  if (err && err.code !== err.PERMISSION_DENIED) {
+    /* keep last finite fix; only permission denial clears the AND-gate */
+    if (spGPSAvailable) return;
+  }
   spGPSAvailable = false;
   let reason;
   switch (err.code) {
     case err.PERMISSION_DENIED:    reason = 'GPS permission denied'; break;
     case err.POSITION_UNAVAILABLE: reason = 'GPS position unavailable'; break;
     case err.TIMEOUT:              reason = 'GPS fix timed out'; break;
-    default:                       reason = 'GPS error: ' + err.message;
+    default:                       reason = 'GPS error: ' + (err && err.message ? err.message : 'unknown');
   }
   console.warn('StormPath GPS failure — entering SAFE MODE. Reason: ' + reason);
   spSetGPSStatus('GPS ' + (err.code === err.PERMISSION_DENIED ? 'DENIED' : 'UNAVAILABLE'), 'var(--red-alert)');
@@ -5170,7 +5181,7 @@ function spInitGeolocation() {
     spRecomputeState();
     return;
   }
-  const gpsOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+  const gpsOptions = { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 };
   navigator.geolocation.getCurrentPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
   spGPSWatchId = navigator.geolocation.watchPosition(spOnPositionSuccess, spOnPositionError, gpsOptions);
 }
@@ -5720,20 +5731,15 @@ function spEnsureLeaflet() {
     zoomSnap: 0.5
   }).setView([bias.lat, bias.lon], 13);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap &copy; CARTO',
-    subdomains: 'abcd',
-    maxZoom: 19
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    className: 'sp-base-tiles'
   }).addTo(spLeaflet);
   spLeaflet.createPane('labels');
   spLeaflet.getPane('labels').style.zIndex = 450;
   spLeaflet.getPane('labels').style.pointerEvents = 'none';
-  spLabelLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-    pane: 'labels',
-    subdomains: 'abcd',
-    maxZoom: 19
-  });
-  if (spGetSet().labels !== false) spLabelLayer.addTo(spLeaflet);
+  spLabelLayer = null;
 
   spIntelLayer = L.layerGroup().addTo(spLeaflet);
 
@@ -7285,6 +7291,15 @@ function spBootNav() {
   requestAnimationFrame(() => {
     try { spEnsureLeaflet(); } catch (e) {}
     try { spInitGeolocation(); } catch (e) {}
+    var gpsChip = document.getElementById('top-gps-label');
+    if (gpsChip && !gpsChip.dataset.spBound) {
+      gpsChip.dataset.spBound = '1';
+      gpsChip.style.cursor = 'pointer';
+      gpsChip.title = 'Tap to request location';
+      gpsChip.addEventListener('click', function () {
+        try { spInitGeolocation(); } catch (e) {}
+      });
+    }
   });
 }
 if (document.readyState === 'loading') {
