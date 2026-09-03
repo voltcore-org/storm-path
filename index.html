@@ -537,13 +537,15 @@
 
   .hud-nextturn {
     position: absolute;
-    bottom: 80px; left: 16px;
+    bottom: 72px;
+    left: 12px;
+    right: 72px;
     z-index: 10;
     background: rgba(6,13,20,0.92);
     border: 1px solid var(--amber);
     border-left: 4px solid var(--amber);
-    padding: 12px 16px;
-    min-width: 200px;
+    padding: 10px 12px;
+    min-width: 0;
     box-shadow: 0 0 20px rgba(255,171,0,0.1);
   }
 
@@ -1926,14 +1928,25 @@ body {
   .map-wrap.live-map .leaflet-control-attribution a { color: var(--cyan-dim); }
   .map-wrap.live-map .leaflet-control-zoom { display: none; }
 
+  .map-wrap.live-map .leaflet-control-attribution {
+    bottom: 60px !important;
+    left: auto !important;
+    right: 8px !important;
+    max-width: 38%;
+  }
+  .sp-vehicle-btn span, .sp-intel-btn span {
+    font-size: 0.5rem;
+    letter-spacing: 0.4px;
+  }
+  .sp-vehicle-btn, .sp-intel-btn { width: 46px; min-width: 46px; flex: 0 0 46px; }
   .sp-nav-dock {
     position: absolute;
-    left: 14px;
-    right: 14px;
-    bottom: 12px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
     z-index: 20;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: stretch;
     pointer-events: none;
   }
@@ -4326,12 +4339,15 @@ function spRenderSourceChips(containerEl, sources) {
   if (!containerEl) return;
   containerEl.innerHTML = '';
   const normalized = spNormalizeSourceStatuses(sources);
-  SP_SOURCE_KEYS.forEach(key => {
-    const status = normalized[key];
+  const rows = [];
+  rows.push(['GPS', spGPSAvailable ? 'connected' : 'unavailable']);
+  rows.push(['NOAA', normalized.NOAA === 'connected' ? 'connected' : 'unavailable']);
+  rows.push(['NWS', normalized.NWS === 'connected' ? 'connected' : 'unavailable']);
+  rows.forEach(function (row) {
     const chip = document.createElement('div');
-    chip.className = 'sp-source-chip src-' + status;
+    chip.className = 'sp-source-chip src-' + row[1];
     chip.style.marginBottom = '4px';
-    chip.innerHTML = '<span class="sp-source-dot"></span>' + key;
+    chip.innerHTML = '<span class="sp-source-dot"></span>' + row[0];
     containerEl.appendChild(chip);
   });
 }
@@ -4393,24 +4409,52 @@ function spPromoteLiveSource(key, status) {
 
 function spSourcesForState(stateData) {
   const out = spNormalizeSourceStatuses(stateData && stateData.sources);
-  if (!spLiveSources) return out;
-  if (spLiveSources.NWS === 'connected' || spLiveSources.NWS === 'unavailable') out.NWS = spLiveSources.NWS;
-  if (spLiveSources.NOAA === 'connected' || spLiveSources.NOAA === 'unavailable') out.NOAA = spLiveSources.NOAA;
+  if (spLiveSources) {
+    if (spLiveSources.NWS === 'connected' || spLiveSources.NWS === 'unavailable') out.NWS = spLiveSources.NWS;
+    if (spLiveSources.NOAA === 'connected' || spLiveSources.NOAA === 'unavailable') out.NOAA = spLiveSources.NOAA;
+  }
+  if (spWeatherOK === true) out.NWS = 'connected';
+  else if (spWeatherOK === false) out.NWS = 'unavailable';
+  if (spRadarOK === true) out.NOAA = 'connected';
+  else if (spRadarOK === false) out.NOAA = 'unavailable';
   return out;
+}
+
+function spLiveConfidence() {
+  const gps = spGPSAvailable === true && Number.isFinite(spCoords.lat);
+  const acc = Number(spCoords && spCoords.accuracy);
+  const nws = spWeatherOK === true;
+  const radar = spRadarOK === true;
+  const pts = [];
+  if (gps) {
+    if (Number.isFinite(acc) && acc <= 15) pts.push(96);
+    else if (Number.isFinite(acc) && acc <= 40) pts.push(88);
+    else if (Number.isFinite(acc) && acc <= 80) pts.push(76);
+    else pts.push(70);
+  }
+  if (nws) pts.push(92);
+  if (radar) pts.push(90);
+  if (!pts.length) {
+    return { confPercent: null, confLevel: 'unknown', confLevelLabel: 'UNKNOWN' };
+  }
+  const pct = Math.round(pts.reduce(function (a, b) { return a + b; }, 0) / pts.length);
+  const level = pct >= 90 ? 'high' : pct >= 70 ? 'medium' : 'low';
+  return { confPercent: pct, confLevel: level, confLevelLabel: level.toUpperCase() };
 }
 
 function spRuntimeStateData(stateData) {
   if (!stateData || typeof stateData !== 'object') return stateData;
+  const live = spLiveConfidence();
   return {
     label: stateData.label,
-    confPercent: stateData.confPercent,
-    confLevel: stateData.confLevel,
-    confLevelLabel: stateData.confLevelLabel,
+    confPercent: live.confPercent,
+    confLevel: live.confLevel,
+    confLevelLabel: live.confLevelLabel,
     icon: stateData.icon,
     action: stateData.action,
     reason: stateData.reason,
     fallback: stateData.fallback,
-    showPlaceholder: stateData.showPlaceholder,
+    showPlaceholder: false,
     conflictFlag: stateData.conflictFlag,
     staleFlag: stateData.staleFlag,
     sources: spSourcesForState(stateData)
@@ -4429,7 +4473,7 @@ const SP_STATES = {
   normal: {
     label:'NORMAL', confPercent:null, confLevel:'unknown', confLevelLabel:'UNKNOWN',
     icon:'✓', action:'CONTINUE ROUTE',
-    reason:'No active NWS alerts for your location. Non-weather categories remain prototype data — not live.',
+    reason:'No active NWS alerts for your location.',
     fallback:'If NWS alerts are issued for your route, Storm Path will escalate automatically.',
     showPlaceholder:true,
     sources:{'NOAA':'prototype','NWS':'prototype','DOT':'prototype','EMERG MGMT':'prototype','ROAD CLOSURES':'prototype','SHELTERS':'prototype'}
