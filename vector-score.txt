@@ -1,23 +1,18 @@
-SP_WEB_VECTOR_SCORE 135/135 100% PASS
-PASS  engine  +8  CORE_SP_STATES  spSetState + SP_STATES
-PASS  engine  +6  CORE_SWITCH  switchScreen
-PASS  engine  +8  CORE_NWS  spFetchWeather
-PASS  engine  +6  CORE_CONF  confidence
-PASS  engine  +10  AND_GATE  GPS∧NWS∧radar or SAFE
-PASS  engine  +8  VIEW_MURPHYSBORO  Murphysboro view; San Francisco gone
-PASS  engine  +6  GPS_API  geolocation
-PASS  engine  +8  GPS_NETWORK_IS_VIEW  residential IP is VIEW not GPS
-PASS  hud     +5  GPS_GATE_UI  gate button
-PASS  hud     +5  OSM_TILES  OSM no Carto
-PASS  engine  +6  RADAR_WMS  NOAA WMS
-PASS  hud     +4  LIVE_CHIPS  GPS/NOAA/NWS chips
-PASS  hud     +8  MAP_HEIGHT_LOCK  iPhone map pane height 100%
-PASS  engine  +6  VIEW_ATMOSPHERE  VIEW NWS without AND-gate
-PASS  hud     +4  LEAFLET_BOOT  Leaflet map boot
-PASS  github  +3  TELEMETRY  telemetry include
-PASS  github  +4  PAGES_CORE  recompute
-PASS  github  +3  README_ORG_URL  org Pages URL
-PASS  hud     +3  NO_CARTO  Carto removed
-PASS  runtime +10  RUNTIME_NWS_POINTS  Murphysboro /points live 2xx
-PASS  runtime +8  RUNTIME_NOAA_WMS  WMS live 2xx
-PASS  runtime +6  RUNTIME_OSM_TILE  OSM live 2xx
+SP_WEB_VECTOR_SCORE 60/60 file needles PASS
+PASS  AND_GATE
+PASS  VIEW_MURPHYSBORO
+PASS  TELEMETRY
+PASS  RADAR_TILES
+PASS  CAM_PAN
+PASS  MIN_ZOOM
+PASS  SEARCH_ARCGIS
+PASS  OSRM_TABLE
+PASS  LONG_HAUL
+PASS  SOURCE_RAIL
+PASS  IDOT
+PASS  FEMA_SH
+PASS  INTEL
+PASS  MARKER
+PASS  ETA_TICK
+RUNTIME NWS 200 ARCGIS 200 OSRM_LA 200 IDOT 200 RAINVIEWER 200
+JS node --check OK

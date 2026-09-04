@@ -1130,6 +1130,44 @@
 
   .sp-source-chip.src-unavailable { color: rgba(255,120,120,0.7); border-color: rgba(255,61,61,0.25); }
   .sp-source-chip.src-prototype { color: rgba(255,255,255,0.4); }
+  .sp-source-chip { cursor: pointer; }
+  .sp-src-rail {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 88vw); z-index: 850;
+    background: rgba(6,13,20,.98); border-left: 1px solid rgba(0,229,255,.18);
+    transform: translateX(110%); transition: transform .2s ease; display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sp-src-rail.open { transform: translateX(0); }
+  .sp-src-rail header {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    border-bottom: 1px solid rgba(0,229,255,.18);
+    font: 800 11px/1 "Courier New", monospace; letter-spacing: 1.4px; color: var(--cyan);
+  }
+  .sp-src-rail header button {
+    margin-left: auto; min-width: 36px; min-height: 36px; border: 1px solid var(--cyan);
+    background: transparent; color: var(--cyan); font-size: 18px;
+  }
+  .sp-src-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-bottom: 1px solid rgba(0,229,255,.18); }
+  .sp-src-nav button {
+    border: 1px solid rgba(255,255,255,.12); background: transparent; color: rgba(255,255,255,.5);
+    min-height: 32px; padding: 0 8px; font-size: 9px; letter-spacing: .6px; font-weight: 800;
+  }
+  .sp-src-nav button.on { border-color: var(--cyan); color: var(--cyan); }
+  .sp-src-body { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 24px; }
+  .sp-src-card { border: 1px solid rgba(0,229,255,.18); background: rgba(10,21,32,.9); padding: 10px; margin-top: 8px; }
+  .sp-src-card .t { font-weight: 800; font-size: 13px; }
+  .sp-src-card .b { color: #8aa4b3; font-size: 12px; margin-top: 4px; }
+  .sp-src-card .w { color: var(--cyan); font-size: 10px; letter-spacing: .6px; margin-top: 6px; font-family: "Courier New", monospace; }
+  .sp-src-del {
+    margin-top: 8px; min-height: 32px; width: 100%; border: 1px solid var(--red-alert);
+    background: transparent; color: var(--red-alert); font-size: 10px; letter-spacing: 1px; font-weight: 800;
+  }
+  .sp-storm-path {
+    position: absolute; left: 8px; right: 8px; bottom: 148px; z-index: 530;
+    background: rgba(8,28,40,.96); border: 1px solid var(--cyan); color: #e8fbff;
+    padding: 8px 10px; font-size: 11px; display: none;
+  }
+  .sp-storm-path.show { display: block; }
 
   .sp-conf-badge {
     font-weight: 700;
@@ -3103,12 +3141,12 @@ body {
   </div>
 
   <div class="sp-source-panel" id="sp-source-panel">
-    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>NOAA</div>
-    <div class="sp-source-chip src-unavailable"><span class="sp-source-dot"></span>NWS</div>
-    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>DOT</div>
-    <div class="sp-source-chip src-unavailable"><span class="sp-source-dot"></span>EMERG MGMT</div>
-    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>ROAD CLOSURES</div>
-    <div class="sp-source-chip src-prototype"><span class="sp-source-dot"></span>SHELTERS</div>
+    <button type="button" class="sp-source-chip src-prototype" data-src="NOAA"><span class="sp-source-dot"></span>NOAA</button>
+    <button type="button" class="sp-source-chip src-unavailable" data-src="NWS"><span class="sp-source-dot"></span>NWS</button>
+    <button type="button" class="sp-source-chip src-prototype" data-src="DOT"><span class="sp-source-dot"></span>DOT</button>
+    <button type="button" class="sp-source-chip src-unavailable" data-src="EMERG MGMT"><span class="sp-source-dot"></span>EMERG MGMT</button>
+    <button type="button" class="sp-source-chip src-prototype" data-src="ROAD CLOSURES"><span class="sp-source-dot"></span>ROAD CLOSURES</button>
+    <button type="button" class="sp-source-chip src-prototype" data-src="SHELTERS"><span class="sp-source-dot"></span>SHELTERS</button>
   </div>
 
   <div class="sp-center">
@@ -3510,7 +3548,7 @@ body {
       <div><b>Not emergency navigation</b><span>Not a substitute for official warnings, NOAA Weather Radio, or 911. GPS, radar, and routes can be late, stale, or wrong. Confirm with weather.gov before you drive into a storm.</span></div>
     </div>
     <div class="sp-set-row">
-      <div><b>Sources</b><span>api.weather.gov · opengeo.ncep.noaa.gov · tile.openstreetmap.org · router.project-osrm.org · photon.komoot.io</span></div>
+      <div><b>Sources</b><span>api.weather.gov · NOAA NEXRAD · IDOT · OpenFEMA · FEMA NSS · OSRM · ArcGIS · Photon</span></div>
     </div>
   </div>
 </div>
@@ -4007,6 +4045,7 @@ let spRadarOK = null;
 // applied by spRecomputeState() once GPS, weather, AND radar are all
 // currently OK — see below.
 let spLastAlertState = null;
+let spNwsAlertCache = [];
 
 function spUpdateWxRadarBadge() {
   const el = document.getElementById('wx-radar-status-badge');
@@ -4391,17 +4430,17 @@ function spRenderSourceChips(containerEl, sources) {
   if (!containerEl) return;
   containerEl.innerHTML = '';
   const normalized = spNormalizeSourceStatuses(sources);
-  const gpsOk = (typeof spGPSAvailable !== 'undefined') && !!spGPSAvailable;
-  const rows = [
-    ['GPS', gpsOk ? 'connected' : 'unavailable'],
-    ['NOAA', normalized.NOAA === 'connected' ? 'connected' : 'unavailable'],
-    ['NWS', normalized.NWS === 'connected' ? 'connected' : 'unavailable']
-  ];
-  rows.forEach(function (row) {
-    const chip = document.createElement('div');
-    chip.className = 'sp-source-chip src-' + row[1];
-    chip.style.marginBottom = '4px';
-    chip.innerHTML = '<span class="sp-source-dot"></span>' + row[0];
+  const keys = (typeof SP_SOURCE_KEYS !== 'undefined') ? SP_SOURCE_KEYS : ['NOAA','NWS','DOT','EMERG MGMT','ROAD CLOSURES','SHELTERS'];
+  keys.forEach(function (key) {
+    let st = normalized[key] || 'unavailable';
+    if (spOfficialOk && spOfficialOk[key]) st = 'connected';
+    if (key === 'NOAA' && typeof spRadarOK !== 'undefined' && spRadarOK) st = 'connected';
+    if (key === 'NWS' && typeof spWeatherOK !== 'undefined' && spWeatherOK) st = 'connected';
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.setAttribute('data-src', key);
+    chip.className = 'sp-source-chip src-' + st;
+    chip.innerHTML = '<span class="sp-source-dot"></span>' + key;
     containerEl.appendChild(chip);
   });
 }
@@ -5475,6 +5514,7 @@ async function spFetchViewAtmosphere(lat, lon, why) {
       capeDisplay: 'N/A'
     });
     const alerts = (alertsResp && Array.isArray(alertsResp.features)) ? alertsResp.features : [];
+    spNwsAlertCache = alerts;
     spUpdateAlertTicker(alerts);
     spPaintNwsAlerts(alerts);
     var countEl = document.getElementById('wx-alert-count');
@@ -5530,6 +5570,7 @@ async function spFetchWeather(lat, lon) {
     });
 
     const alerts = (alertsResp && Array.isArray(alertsResp.features)) ? alertsResp.features : [];
+    spNwsAlertCache = alerts;
     spUpdateAlertTicker(alerts);
     spPaintNwsAlerts(alerts);
 
@@ -5824,8 +5865,11 @@ function spEnsureLeaflet() {
   const bias = spBias();
   spLeaflet = L.map('sp-leaflet', {
     zoomControl: false,
-    attributionControl: true,
-    zoomSnap: 0.5
+    attributionControl: false,
+    zoomSnap: 0.5,
+    minZoom: 2,
+    maxZoom: 19,
+    worldCopyJump: true
   }).setView([bias.lat, bias.lon], 13);
 
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -5841,6 +5885,8 @@ function spEnsureLeaflet() {
   spIntelLayer = L.layerGroup().addTo(spLeaflet);
 
   spLeaflet.on('dragstart', () => { spFollowGps = false; });
+  spLeaflet.on('zoomstart', () => { if (!spCamProg) spFollowGps = false; });
+  spLoadRadarTiles();
   spLeaflet.on('moveend', () => {
     if (spNavActive && spFollowGps) return;
     clearTimeout(spRadarMoveTimer);
@@ -6065,12 +6111,13 @@ function spApplyGpsToMarker() {
   if (spLeaflet && spFollowGps) {
     if (!spDidFlyToGps) {
       spDidFlyToGps = true;
+      spCamProg = true;
       spLeaflet.setView([lat, lon], 14, { animate: true });
-      spRefreshLeafletRadar();
-    } else if (spNavActive && moving) {
-      const z = spNavZoom(spNav.mps);
-      const cur = spLeaflet.getZoom();
-      spLeaflet.setView([lat, lon], Math.abs(cur - z) >= 1 ? z : cur, { animate: false });
+      setTimeout(function(){ spCamProg = false; }, 400);
+    } else {
+      spCamProg = true;
+      spLeaflet.panTo([lat, lon], { animate: false });
+      setTimeout(function(){ spCamProg = false; }, 80);
     }
   }
   if (spNavActive) {
@@ -6182,7 +6229,13 @@ function spPlaceSub(p) {
     .filter(Boolean).join(', ');
   if (Number.isFinite(p._mi)) {
     const d = p._mi < 10 ? p._mi.toFixed(1) : String(Math.round(p._mi));
-    return d + ' mi' + (bits ? ' · ' + bits : '');
+    let eta = '';
+    if (Number.isFinite(p._eta)) {
+      const s = Math.round(p._eta);
+      const hh = Math.floor(s/3600), mm = Math.floor((s%3600)/60), ss = s%60;
+      eta = hh ? (hh+'h '+mm+'m') : (mm ? (mm+' min '+ss+'s') : (ss+'s'));
+    }
+    return [bits, d + ' mi', eta].filter(Boolean).join(' · ');
   }
   return bits;
 }
@@ -6218,12 +6271,16 @@ async function spPhotonSearch(q) {
   const nomUrl = SP_NOMINATIM + '?format=jsonv2&addressdetails=1&countrycodes=us&dedupe=1&limit=10&q=' + encodeURIComponent(q) +
     '&viewbox=' + encodeURIComponent(box) + '&bounded=' + (poi ? '1' : '0');
   const omUrl = SP_OPENMETEO + '?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json&countryCode=US';
+  const far = /\d/.test(q) || /,/.test(q) || /\b[A-Z]{2}\b/.test(q);
+  const dist = far ? '' : '&distance=150000';
+  const arcUrl = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&countryCode=USA&maxLocations=10&outFields=Addr_type,Match_addr,LongLabel,PlaceName,StAddr,Place_addr,City,Region,Postal&location=' + bias.lon + ',' + bias.lat + dist + '&SingleLine=' + encodeURIComponent(q);
   const tasks = [
     spFetchOkJson(photonUrl, { signal: sig }, 8000).catch(() => ({ features: [] })),
     spFetchOkJson(nomUrl, { headers: { 'Accept': 'application/json', 'Accept-Language': 'en-US' }, signal: sig }, 8000).catch(() => []),
-    spFetchOkJson(omUrl, { signal: sig }, 8000).catch(() => ({}))
+    spFetchOkJson(omUrl, { signal: sig }, 8000).catch(() => ({})),
+    spFetchOkJson(arcUrl, { signal: sig }, 8000).catch(() => ({ candidates: [] }))
   ];
-  const [photonJson, nomJson, omJson] = await Promise.all(tasks);
+  const [photonJson, nomJson, omJson, arcJson] = await Promise.all(tasks);
   const photon = ((photonJson && photonJson.features) || []).map(f => {
     const p = f.properties || {};
     const c = (f.geometry && f.geometry.coordinates) || [0, 0];
@@ -6271,6 +6328,24 @@ async function spPhotonSearch(q) {
     seen[k] = 1;
     merged.push(p);
   }
+  const arcgis = ((arcJson && arcJson.candidates) || []).map(function(row){
+    const loc = row.location || {};
+    const attr = row.attributes || {};
+    const place = attr.PlaceName || '';
+    const street = attr.StAddr || '';
+    return {
+      name: place || attr.Match_addr || row.address || null,
+      housenumber: street ? street.split(' ')[0] : null,
+      street: street || attr.Place_addr || null,
+      city: attr.City || null,
+      state: attr.Region || null,
+      country: 'United States',
+      osm_value: attr.Addr_type || 'arcgis',
+      lon: loc.x, lat: loc.y,
+      _score: row.score
+    };
+  }).filter(function(p){ return p._score == null || p._score >= 70; });
+  arcgis.forEach(push);
   photon.forEach(push);
   extra.forEach(push);
   if (!poi) {
@@ -6282,7 +6357,17 @@ async function spPhotonSearch(q) {
     p._mi = spHaversineMi(bias.lat, bias.lon, p.lat, p.lon);
   });
   merged.sort((a, b) => a._mi - b._mi);
-  return merged.filter(p => p._mi <= cap).slice(0, 10);
+  const hits = merged.filter(p => far || p._mi <= cap).slice(0, 8);
+  try {
+    if (hits.length) {
+      const path = [bias.lon + ',' + bias.lat].concat(hits.map(function(h){ return h.lon + ',' + h.lat; })).join(';');
+      const dests = hits.map(function(_,i){ return i+1; }).join(';');
+      const table = await spFetchOkJson('https://router.project-osrm.org/table/v1/driving/' + path + '?sources=0&destinations=' + dests + '&annotations=duration,distance', {}, 8000).catch(function(){ return null; });
+      const durs = table && table.durations && table.durations[0];
+      hits.forEach(function(h, i){ if (durs && Number.isFinite(durs[i])) h._eta = durs[i]; });
+    }
+  } catch (e) {}
+  return hits;
 }
 
 function spIsPoiQuery(q) {
@@ -6462,8 +6547,8 @@ async function spGoDestination(placeArg) {
     console.warn('StormPath route failed', e);
     const msg = String(e && e.message || '');
     spToast(msg.indexOf('too far') >= 0
-      ? 'TOO FAR FOR A DRIVE · PICK SOMETHING NEARER'
-      : 'ROUTE UNAVAILABLE · TRY A NEARER PLACE');
+      ? 'TOO FAR FOR OSRM · PICK A US PLACE'
+      : 'ROUTE UNAVAILABLE · TRY AGAIN');
     spCommitDestination(place, true);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'START DRIVE'; }
@@ -6565,11 +6650,11 @@ async function spRouteTo(place) {
     return;
   }
   const spanMi = spHaversineMi(spCoords.lat, spCoords.lon, place.lat, place.lon);
-  if (spanMi > 250) {
+  if (spanMi > 3200) {
     throw new Error('too far (' + Math.round(spanMi) + ' mi)');
   }
   const url = SP_OSRM + spCoords.lon + ',' + spCoords.lat + ';' + place.lon + ',' + place.lat +
-    '?overview=full&geometries=geojson&steps=true';
+    '?overview=full&geometries=geojson&steps=true&alternatives=true';
   const json = await spFetchOkJson(url, {}, 20000);
   if (!spIsPlainObject(json) || json.code !== 'Ok' || !Array.isArray(json.routes) || !json.routes[0]) throw new Error('osrm empty');
   const route = json.routes[0];
@@ -7476,6 +7561,32 @@ function spBootNav() {
       spFetchViewAtmosphere(view.lat, view.lon, 'murphysboro');
     } catch (e) {}
     try { spRequestLiveLocation(); } catch (e) {}
+    try { spLoadOfficialSources(); } catch (e) {}
+    try { setInterval(spLoadRadarTiles, 10*60*1000); } catch (e) {}
+    var panel = document.getElementById('sp-source-panel');
+    if (panel && !panel.dataset.spBound) {
+      panel.dataset.spBound = '1';
+      panel.addEventListener('click', function(ev){
+        var b = ev.target.closest('[data-src]');
+        if (b) spOpenOfficialRail(b.getAttribute('data-src'));
+      });
+    }
+    var closeRail = document.getElementById('spSrcRailClose');
+    if (closeRail) closeRail.addEventListener('click', function(){ document.getElementById('spSrcRail').classList.remove('open'); });
+    var nav = document.getElementById('spSrcNav');
+    if (nav) nav.addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-src]');
+      if (b) spOpenOfficialRail(b.getAttribute('data-src'));
+    });
+    var body = document.getElementById('spSrcBody');
+    if (body) body.addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-del]');
+      if (!b) return;
+      var id = b.getAttribute('data-del');
+      if (spOfficialDismissed.indexOf(id) < 0) spOfficialDismissed.push(id);
+      try { localStorage.setItem('sp.dismiss.v1', JSON.stringify(spOfficialDismissed)); } catch (e2) {}
+      spRenderOfficialRail();
+    });
     var gpsGateBtn = document.getElementById('sp-gps-gate');
     if (gpsGateBtn && !gpsGateBtn.dataset.spBound) {
       gpsGateBtn.dataset.spBound = '1';
@@ -7498,13 +7609,146 @@ function spBootNav() {
     }
   });
 }
+
+let spCamProg = false;
+let spRadarTiles = null;
+let spOfficialOk = {};
+let spOfficialReports = {};
+let spOfficialTab = 'NWS';
+let spOfficialDismissed = [];
+try { spOfficialDismissed = JSON.parse(localStorage.getItem('sp.dismiss.v1') || '[]') || []; } catch (e) { spOfficialDismissed = []; }
+
+async function spLoadRadarTiles() {
+  if (!spLeaflet) return;
+  try {
+    const maps = await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r => r.json());
+    const past = (maps && maps.radar && maps.radar.past) || [];
+    const last = past[past.length - 1];
+    if (!last || !last.path) throw new Error('no frame');
+    const host = (maps.host || 'https://tilecache.rainviewer.com').replace(/\/$/, '');
+    const url = host + last.path + '/256/{z}/{x}/{y}/2/1_1.png';
+    if (spRadarTiles) spLeaflet.removeLayer(spRadarTiles);
+    if (spRadarOverlay) { try { spLeaflet.removeLayer(spRadarOverlay); } catch (e) {} spRadarOverlay = null; }
+    spRadarTiles = L.tileLayer(url, { opacity: 0.62, minZoom: 1, maxZoom: 19, maxNativeZoom: 7, className: 'sp-radar-tiles' });
+    spRadarTiles.addTo(spLeaflet);
+    return;
+  } catch (e) {
+    spRefreshLeafletRadar();
+  }
+}
+
+function spRenderOfficialRail() {
+  const nav = document.getElementById('spSrcNav');
+  const body = document.getElementById('spSrcBody');
+  if (!nav || !body) return;
+  const keys = (typeof SP_SOURCE_KEYS !== 'undefined') ? SP_SOURCE_KEYS : ['NOAA','NWS','DOT','EMERG MGMT','ROAD CLOSURES','SHELTERS'];
+  nav.innerHTML = keys.map(function(n){
+    return '<button type="button" data-src="'+n+'" class="'+(spOfficialTab===n?'on':'')+'">'+n+(spOfficialOk[n]?' LIVE':'')+'</button>';
+  }).join('');
+  const hide = {};
+  (spOfficialDismissed || []).forEach(function(id){ hide[id] = true; });
+  const rows = (spOfficialReports[spOfficialTab] || []).filter(function(r){ return !hide[r.id]; });
+  if (!rows.length) {
+    body.innerHTML = '<div style="color:#8aa4b3">'+(spOfficialOk[spOfficialTab]?'FEED LIVE':'FEED WAIT')+' · 0 reports in '+spOfficialTab+'</div>';
+    return;
+  }
+  body.innerHTML = rows.map(function(r){
+    return '<div class="sp-src-card"><div class="t"></div><div class="b"></div><div class="w"></div><button type="button" class="sp-src-del" data-del="'+String(r.id).replace(/"/g,'')+'">DELETE</button></div>';
+  }).join('');
+  const cards = body.querySelectorAll('.sp-src-card');
+  rows.forEach(function(r, i){
+    cards[i].querySelector('.t').textContent = r.title || '';
+    cards[i].querySelector('.b').textContent = r.body || '';
+    cards[i].querySelector('.w').textContent = r.when || '';
+  });
+}
+function spOpenOfficialRail(src) {
+  if (src) spOfficialTab = src;
+  document.getElementById('spSrcRail').classList.add('open');
+  spRenderOfficialRail();
+}
+async function spLoadOfficialSources() {
+  const keys = ['NOAA','NWS','DOT','EMERG MGMT','ROAD CLOSURES','SHELTERS'];
+  const jobs = [];
+  jobs.push((async function(){
+    try {
+      const maps = await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r=>r.json());
+      const last = ((maps.radar||{}).past||[]).slice(-1)[0];
+      spOfficialReports.NOAA = last ? [{ id:'noaa-rv', title:'NEXRAD MOSAIC', body:'RainViewer / NOAA NEXRAD', when: new Date(last.time*1000).toLocaleString() }] : [];
+      spOfficialOk.NOAA = !!last;
+    } catch (e) { spOfficialOk.NOAA = !!spRadarOK; }
+  })());
+  jobs.push((async function(){
+    const alerts = (typeof spNwsAlertCache !== 'undefined' && Array.isArray(spNwsAlertCache)) ? spNwsAlertCache : [];
+    spOfficialReports.NWS = alerts.map(function(a,i){
+      const pr = a.properties || a;
+      return { id:'nws-'+i, title: pr.event || 'NWS ALERT', body: [pr.severity, pr.headline, pr.areaDesc].filter(Boolean).join(' · '), when: pr.expires || '' };
+    });
+    spOfficialOk.NWS = (typeof spWeatherOK !== 'undefined' && spWeatherOK) || alerts.length > 0;
+  })());
+  jobs.push((async function(){
+    try {
+      const body = await fetch('https://services2.arcgis.com/aIrBD8yn1TDTEXoz/arcgis/rest/services/Illinois_Roadway_Incidents/FeatureServer/0/query?where=1%3D1&outFields=OBJECTID,TRAFFIC_ITEM_TYPE_DESC,CRITICALITY_DESC,ROAD_CLOSED,TRAFFIC_ITEM_DESCRIPTION,ORIGIN,START_TIME&orderByFields=START_TIME%20DESC&resultRecordCount=20&f=json').then(r=>r.json());
+      spOfficialReports.DOT = (body.features||[]).map(function(f){
+        const a = f.attributes || {};
+        return { id:'dot-'+a.OBJECTID, title: String(a.TRAFFIC_ITEM_TYPE_DESC||'IDOT').replace(/_/g,' '), body: a.TRAFFIC_ITEM_DESCRIPTION || a.ORIGIN || ('closed='+a.ROAD_CLOSED), when: a.START_TIME ? new Date(a.START_TIME).toLocaleString() : 'IDOT' };
+      });
+      spOfficialOk.DOT = Array.isArray(body.features);
+    } catch (e) { spOfficialOk.DOT = false; }
+  })());
+  jobs.push((async function(){
+    try {
+      const body = await fetch("https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries?$filter=state%20eq%20'IL'&$orderby=declarationDate%20desc&$top=8").then(r=>r.json());
+      const rows = body.DisasterDeclarationsSummaries || [];
+      spOfficialReports['EMERG MGMT'] = rows.map(function(r){
+        return { id:'fema-'+r.disasterNumber, title: r.declarationTitle || r.incidentType || 'FEMA', body: [r.state, r.declarationType, 'DR-'+r.disasterNumber].filter(Boolean).join(' · '), when: String(r.declarationDate||'').slice(0,10) };
+      });
+      spOfficialOk['EMERG MGMT'] = Array.isArray(rows);
+    } catch (e) { spOfficialOk['EMERG MGMT'] = false; }
+  })());
+  jobs.push((async function(){
+    try {
+      const body = await fetch('https://services2.arcgis.com/aIrBD8yn1TDTEXoz/arcgis/rest/services/ClosureIncidents/FeatureServer/0/query?where=1%3D1&outFields=OBJECTID,ID,Location,St_Name,ClosureType,ConstructionType,DetourRoute,County,StartDate&orderByFields=StartDate%20DESC&resultRecordCount=20&f=json').then(r=>r.json());
+      spOfficialReports['ROAD CLOSURES'] = (body.features||[]).map(function(f){
+        const a = f.attributes || {};
+        return { id:'close-'+(a.ID||a.OBJECTID), title: a.ClosureType || a.ConstructionType || 'CLOSURE', body: [a.Location, a.St_Name, a.DetourRoute].filter(Boolean).join(' · '), when: a.StartDate ? new Date(a.StartDate).toLocaleString() : 'IDOT' };
+      });
+      spOfficialOk['ROAD CLOSURES'] = Array.isArray(body.features);
+    } catch (e) { spOfficialOk['ROAD CLOSURES'] = false; }
+  })());
+  jobs.push((async function(){
+    try {
+      const body = await fetch('https://gis.fema.gov/arcgis/rest/services/NSS/OpenShelters/MapServer/0/query?where=1%3D1&outFields=shelter_id,shelter_name,address,city,state,shelter_status&resultRecordCount=40&f=json').then(r=>r.json());
+      spOfficialReports.SHELTERS = (body.features||[]).map(function(f){
+        const a = f.attributes || {};
+        return { id:'sh-'+(a.shelter_id||a.shelter_name), title: a.shelter_name || 'OPEN SHELTER', body: [a.address, a.city, a.state, a.shelter_status].filter(Boolean).join(' · '), when: 'FEMA NSS OPEN' };
+      });
+      spOfficialOk.SHELTERS = Array.isArray(body.features);
+    } catch (e) { spOfficialOk.SHELTERS = false; }
+  })());
+  await Promise.all(jobs);
+  const panel = document.getElementById('sp-source-panel');
+  if (panel && typeof spRenderSourceChips === 'function') {
+    try { spRenderSourceChips(panel, typeof spLiveSources !== 'undefined' ? spLiveSources : {}); } catch (e) {}
+  }
+  if (document.getElementById('spSrcRail').classList.contains('open')) spRenderOfficialRail();
+}
+
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', spBootNav);
 } else {
   spBootNav();
 }
 
+
 </script>
 
+<aside class="sp-src-rail" id="spSrcRail" aria-label="Source reports">
+  <header>SOURCE REPORTS <button type="button" id="spSrcRailClose" aria-label="Close">×</button></header>
+  <nav class="sp-src-nav" id="spSrcNav"></nav>
+  <div class="sp-src-body" id="spSrcBody"></div>
+</aside>
+<div class="sp-storm-path" id="spStormPath"></div>
 </body>
 </html>
